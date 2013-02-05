@@ -4,3 +4,10 @@
 *.jar
 *.war
 *.ear
+/.metadata
+/Nimbus/.classpath
+/Nimbus/.project
+/Nimbus/.settings/org.eclipse.jdt.core.prefs
+/Nimbus/.settings/org.eclipse.jdt.launching.prefs
+
+/Nimbus/native/*.o
