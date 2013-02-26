@@ -6,7 +6,7 @@
   <!-- Because this is system dependent, there is no default. -->
   <property>
     <name>java.home</name>
-    <value>/usr/java/jdk1.6.0_23</value>
+    <value></value>
   </property>
 
   <!-- The zookeeper.quorum.servers property is a comma separated list -->
@@ -25,14 +25,6 @@
     <value>INFO</value>
   </property>
 
-  <!-- The fs.default.name property is the file system name space for Nimbus. -->
-  <!-- In order from lowest to highest, values are DEBUG, INFO, WARN, ERROR, and FATAL-->
-  <!-- Default value is hdfs://localhost:9000 -->
-  <property>
-    <name>fs.default.name</name>
-    <value>hdfs://localhost:9000</value>
-  </property>
-
   <!-- This property is the port that the Nimbus Master runs on. -->
   <!-- Also, the start-master.sh reads this file to get the value. -->
   <!-- It uses grep to find the property, so it is best not to put -->
@@ -47,16 +39,16 @@
   <!-- Default value is /usr/local/nimbus -->
   <property>
     <name>nimbus.home</name>
-    <value>/home/ashook/nimbus/Nimbus</value>
+    <value>/usr/local/nimbus</value>
   </property>
 
   <!-- The nimbus.ports property is a range of ports that are open and -->
   <!-- available for the Nimbus Master to start Caches on. -->
   <!-- The range is delimited by a hyphen (-). -->
-  <!-- Default value is 4445-5000 -->
+  <!-- Default value is 4445 -->
   <property>
     <name>nimbus.ports</name>
-    <value>4445-5000</value>
+    <value>4445</value>
   </property>
 
   <!-- This sets the replication factor for all Caches.  -->

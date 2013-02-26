@@ -84,6 +84,7 @@ public class SetCacheletServer extends ICacheletServer {
 
 	public boolean distributedLoadFromHDFS(Path file, int approxNumRecords,
 			float desiredFalsePosRate, int cacheletID) {
+		LOG.info("distributedLoadFromHDFS:: " + file + " " + approxNumRecords + " " + desiredFalsePosRate + " " + cacheletID);
 		int numCachelets = NimbusConf.getConf().getNumNimbusCachelets();
 		int replication = NimbusConf.getConf().getReplicationFactor();;
 		approxNumRecords = approxNumRecords / numCachelets * replication;
@@ -91,8 +92,10 @@ public class SetCacheletServer extends ICacheletServer {
 		try {
 			NimbusMaster.getInstance().setCacheletAvailability(cacheName,
 					cacheletName, false);
+			
 			FileSystem fs = FileSystem.get(NimbusConf.getConf());
 			long start = System.currentTimeMillis();
+			
 			LOG.info("Reading from file " + file.makeQualified(fs)
 					+ ".  My Cachelet ID is " + cacheletID);
 

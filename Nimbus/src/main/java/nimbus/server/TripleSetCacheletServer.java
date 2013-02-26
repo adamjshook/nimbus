@@ -18,8 +18,6 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 
 import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
-import nimbus.utils.BloomFilter;
-import nimbus.utils.CSet;
 import nimbus.utils.ICacheletHash;
 import nimbus.utils.Triple;
 import nimbus.utils.TripleSet;

@@ -98,6 +98,7 @@ public class BaseNimbusClient implements Runnable {
 			try {
 				echoSocket = new Socket(host, port);
 				connected = true;
+				LOG.info("Connected to " + host + " on port " + port);
 			} catch (ConnectException e) {
 				--failattempts;
 				if (failattempts != 0) {

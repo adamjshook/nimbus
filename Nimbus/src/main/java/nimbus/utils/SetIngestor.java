@@ -103,6 +103,11 @@ public class SetIngestor {
 					}
 				} else {
 					master.createCache(cacheName, CacheType.DISTRIBUTED_SET);
+					
+					while (!master.exists(cacheName)) {
+						LOG.info("Cache does not exist yet... Sleeping");
+						Thread.sleep(1000);
+					}
 				}
 
 				master.disconnect();

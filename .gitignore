@@ -7,7 +7,18 @@
 /.metadata
 /Nimbus/.classpath
 /Nimbus/.project
-/Nimbus/.settings/org.eclipse.jdt.core.prefs
-/Nimbus/.settings/org.eclipse.jdt.launching.prefs
+/Nimbus/.settings
+/Nimbus/.settings
 
 /Nimbus/native/*.o
+/Nimbus/native/NativeNimbus.*
+/Nimbus/native/libNativeNimbus.so
+
+# Temporary
+/Nimbus/dependency-reduced-pom.xml
+/Nimbus/pids
+/Nimbus/target
+/NimbusBenchmark/target
+
+
+

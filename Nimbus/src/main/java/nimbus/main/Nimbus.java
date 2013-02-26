@@ -2,6 +2,7 @@ package nimbus.main;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.security.InvalidParameterException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -16,7 +17,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -27,6 +27,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 
 import nimbus.client.BaseNimbusClient;
+import nimbus.client.MasterClient;
 import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
 import nimbus.master.NimbusSafetyNet;
@@ -62,10 +63,6 @@ public class Nimbus extends Configured implements Tool {
 	private static int port;
 	private static CacheType type;
 
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
-
 	// Options
 	private Options options = null;
 	private CommandLineParser parser = new PosixParser();
@@ -77,6 +74,28 @@ public class Nimbus extends Configured implements Tool {
 	public int run(String[] args) throws Exception {
 		parseOptions(args);
 
+		if (line.hasOption("start")) {
+			startCache();
+		} else if (line.hasOption("kill")) {
+			killCache(line.getOptionValue("kill"));
+		} else {
+			throw new InvalidParameterException("Unknown mode to run in.");
+		}
+
+		return 0;
+	}
+
+	private void killCache(String name) throws IOException {
+
+		MasterClient master = new MasterClient();
+		master.destroyCache(name);
+	}
+
+	private void startCache() throws Exception {
+
+		LOG.info("Starting Nimbus cache");
+		Nimbus.getZooKeeper();
+
 		// Set the Cache ZNode to the root + the Cache name
 		CACHE_ZNODE = ROOT_ZNODE + "/" + cacheName;
 		String cacheletName = InetAddress.getLocalHost().getHostName();
@@ -84,42 +103,51 @@ public class Nimbus extends Configured implements Tool {
 		knownServers.put(InetAddress.getLocalHost().getHostName(), null);
 
 		// add shutdown hook
-		Runtime.getRuntime().addShutdownHook(new NimbusShutdownHook());
+		NimbusShutdownHook.createInstance(type);
 
 		// check if the root node exists, if it doesn't create it
 		if (getZooKeeper().exists(ROOT_ZNODE, false) == null) {
+			LOG.info("Creating root Znode");
 			getZooKeeper().create(ROOT_ZNODE, EMPTY_DATA, Ids.OPEN_ACL_UNSAFE,
 					CreateMode.PERSISTENT);
 		}
 
-		// check if the Cache node exists, if it doesn't create it
-		NimbusMaster.getInstance().getCacheInfoLock(cacheName);
-		info = NimbusMaster.getInstance().getCacheInfo(cacheName);
-		if (info == null) {
-			LOG.info("CacheInfo is null.  Creating CacheZNode...");
-			info = new CacheInfo();
-			info.setName(cacheName);
-			info.setType(type);
-			info.setPort(port);
-			BigBitArray array = new BigBitArray(BigBitArray
-					.makeMultipleOfEight(NimbusConf.getConf()
-							.getNumNimbusCachelets()));
-			info.setAvailabilityArray(array.getBytes());
-
-			getZooKeeper().create(CACHE_ZNODE, info.getByteRepresentation(),
-					Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-			LOG.info("Creating Cache ZNode at " + CACHE_ZNODE
-					+ " with data of size "
-					+ info.getByteRepresentation().length);
-		}
-		NimbusMaster.getInstance().releaseCacheInfoLock(cacheName);
-
 		// Fire up the safety net if enabled
-		if (type.equals(CacheType.MASTER)
-				&& NimbusConf.getConf().isSafetyNetEnabled()) {
-			// Fire up the Safety Net
-			Thread safetynet = new Thread(NimbusSafetyNet.getInstance());
-			safetynet.start();
+		if (type.equals(CacheType.MASTER)) {
+			// check if the Cache node exists, if it doesn't create it
+			NimbusMaster.getInstance().getCacheInfoLock(cacheName);
+			info = NimbusMaster.getInstance().getCacheInfo(cacheName);
+			if (info == null) {
+				LOG.info("CacheInfo is null.  Creating CacheZNode...");
+				info = new CacheInfo();
+				info.setName(cacheName);
+				info.setType(type);
+				info.setPort(port);
+				BigBitArray array = new BigBitArray(
+						BigBitArray.makeMultipleOfEight(NimbusConf.getConf()
+								.getNumNimbusCachelets()));
+				info.setAvailabilityArray(array.getBytes());
+
+				getZooKeeper().create(CACHE_ZNODE,
+						info.getByteRepresentation(), Ids.OPEN_ACL_UNSAFE,
+						CreateMode.PERSISTENT);
+				LOG.info("Creating Cache ZNode at " + CACHE_ZNODE
+						+ " with data of size "
+						+ info.getByteRepresentation().length);
+			}
+			NimbusMaster.getInstance().releaseCacheInfoLock(cacheName);
+
+			if (NimbusConf.getConf().isSafetyNetEnabled()) {
+				// Fire up the Safety Net
+				Thread safetynet = new Thread(NimbusSafetyNet.getInstance());
+				safetynet.start();
+			}
+		} else {
+			// this info is for a non-master cache
+			info = NimbusMaster.getInstance().getCacheInfo(cacheName);
+			if (info == null) {
+				throw new RuntimeException("No info for " + cacheName);
+			}
 		}
 
 		// create my Cachelet
@@ -147,10 +175,12 @@ public class Nimbus extends Configured implements Tool {
 		LOG.info("Creating my ZNode at " + CACHELET_ZNODE);
 		getZooKeeper().create(CACHELET_ZNODE, EMPTY_DATA, Ids.OPEN_ACL_UNSAFE,
 				CreateMode.EPHEMERAL);
-		
+
 		// this while loop manages connections to other Cachelets
 		// if a Cachelet connects, then create a new thread to handle
 		// communication to that Cachelet and wait for more connections
+
+		LOG.info("Starting heartbeat cycle...");
 		long hbInterval = NimbusConf.getConf().getCacheletHeartbeatInterval();
 		getZooKeeper().setData(CACHELET_ZNODE, EMPTY_DATA, -1);
 		long lastheartbeat = System.currentTimeMillis(), now;
@@ -185,6 +215,8 @@ public class Nimbus extends Configured implements Tool {
 		if (s_zk == null) {
 			// Create ZK Instance
 			try {
+				LOG.info("Connecting to ZooKeeper at "
+						+ NimbusConf.getConf().getZooKeeperServers());
 				s_zk = new ZooKeeper(
 						NimbusConf.getConf().getZooKeeperServers(),
 						Integer.MAX_VALUE, new Watcher() {
@@ -219,21 +251,21 @@ public class Nimbus extends Configured implements Tool {
 	private Options getOptions() {
 		if (options == null) {
 			options = new Options();
-			options
-					.addOption(OptionBuilder
-							.withLongOpt("config")
-							.hasArg()
-							.withDescription(
-									"Configuration XML file.  Overrides default values.")
-							.create('c'));
+
+			options.addOption(OptionBuilder.withLongOpt("start")
+					.withDescription("Start a cache").create('s'));
+
+			options.addOption(OptionBuilder.withLongOpt("kill").hasArg()
+					.withDescription("Kill a cache").create('s'));
+
 			options.addOption(OptionBuilder.withLongOpt("port").hasArg()
-					.isRequired().withDescription(
-							"Port to initialize Nimbus with.").create('p'));
+					.withDescription("Port to initialize Nimbus with.")
+					.create('p'));
 			options.addOption(OptionBuilder.withLongOpt("name").hasArg()
-					.isRequired().withDescription("Name of this Cache.")
-					.create('n'));
+					.withDescription("Name of this Cache.").create('n'));
 			options.addOption(OptionBuilder.withLongOpt("type").hasArg()
-					.isRequired().withDescription("Cache type.").create('t'));
+					.withDescription("Cache type.").create('t'));
+
 			options.addOption(OptionBuilder.withLongOpt("help")
 					.withDescription("Displays this help message.").create());
 		}
@@ -249,6 +281,19 @@ public class Nimbus extends Configured implements Tool {
 
 		try {
 			line = parser.parse(getOptions(), args);
+
+			if (line.hasOption("start") && line.hasOption("kill")) {
+				throw new ParseException(
+						"Cannot simultaneously start and kill a cache");
+			}
+
+			// verify all required options are there
+			if (line.hasOption("start")
+					&& (!line.hasOption("port") || !line.hasOption("name") || !line
+							.hasOption("type"))) {
+				throw new ParseException(
+						"Cannot start cache without port, name, and type params");
+			}
 		} catch (MissingOptionException e) {
 			System.err.println(e.getMessage());
 			printHelp();
@@ -263,19 +308,16 @@ public class Nimbus extends Configured implements Tool {
 			System.exit(0);
 		}
 
-		if (line.hasOption("config")) {
-			NimbusConf.getConf().addResource(
-					new Path(line.getOptionValue("config")));
-		}
+		if (line.hasOption("start")) {
+			cacheName = line.getOptionValue("name");
+			type = CacheType.valueOf(line.getOptionValue("type").toUpperCase());
+			port = Integer.parseInt(line.getOptionValue("port"));
 
-		cacheName = line.getOptionValue("name");
-		type = CacheType.valueOf(line.getOptionValue("type").toUpperCase());
-		port = Integer.parseInt(line.getOptionValue("port"));
-
-		if (type == null) {
-			LOG.error("Invalid type.");
-			printHelp();
-			System.exit(-1);
+			if (type == null) {
+				LOG.error("Invalid type.");
+				printHelp();
+				System.exit(-1);
+			}
 		}
 	}
 

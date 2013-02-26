@@ -363,9 +363,9 @@ public class NimbusTripleSetClient {
 	 */
 	private class TripleSetCacheletConnection extends BaseNimbusClient {
 
-		private final Logger LOG = Logger
+		/*private final Logger LOG = Logger
 				.getLogger(TripleSetCacheletConnection.class);
-		private String cacheletName;
+		private String cacheletName;*/
 
 		/**
 		 * Connects to the given host. Automatically gets the port from the
@@ -385,7 +385,7 @@ public class NimbusTripleSetClient {
 			super(cacheletName, NimbusMaster.getInstance().getCachePort(
 					cacheName));
 			super.cacheName = cacheName;
-			this.cacheletName = cacheletName;
+			//this.cacheletName = cacheletName;
 			connect();
 		}
 

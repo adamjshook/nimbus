@@ -8,7 +8,6 @@ import nimbus.main.NimbusConf;
 
 import org.apache.log4j.Logger;
 
-
 /**
  * This class is a JNI wrapper for the C++ std::set and is used by Cachelets to
  * store the actual members of a set. While there is some minor overhead using
@@ -94,7 +93,6 @@ public class CSet implements Set<String> {
 
 	private native boolean c_isEmpty();
 
-
 	@Override
 	public boolean remove(Object o) {
 		return c_remove(o.toString());
@@ -121,15 +119,17 @@ public class CSet implements Set<String> {
 
 	/**
 	 * <b>This method is not supported and throws a RuntimeException</b>
+	 * 
 	 * @throws RuntimeException
 	 */
 	@Override
 	public Iterator<String> iterator() {
 		throw new RuntimeException("Not yet implemented");
 	}
-	
+
 	/**
 	 * <b>This method is not supported and throws a RuntimeException</b>
+	 * 
 	 * @throws RuntimeException
 	 */
 	@Override
@@ -139,6 +139,7 @@ public class CSet implements Set<String> {
 
 	/**
 	 * <b>This method is not supported and throws a RuntimeException</b>
+	 * 
 	 * @throws RuntimeException
 	 */
 	@Override
@@ -148,6 +149,7 @@ public class CSet implements Set<String> {
 
 	/**
 	 * <b>This method is not supported and throws a RuntimeException</b>
+	 * 
 	 * @throws RuntimeException
 	 */
 	@SuppressWarnings("unchecked")

@@ -1,7 +1,6 @@
 package nimbus.client;
 
 import java.io.IOException;
-
 import nimbus.main.Nimbus;
 import nimbus.main.NimbusConf;
 

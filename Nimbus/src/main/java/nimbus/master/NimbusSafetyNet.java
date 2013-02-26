@@ -43,6 +43,7 @@ public class NimbusSafetyNet implements Runnable {
 	private ArrayList<ISafetyNetListener> listeners = new ArrayList<ISafetyNetListener>();
 
 	private static NimbusSafetyNet s_instance = null;
+	private boolean stopped = false;
 
 	/**
 	 * Gets the Singleton instance of the {@link NimbusSafetyNet}.
@@ -78,8 +79,8 @@ public class NimbusSafetyNet implements Runnable {
 			e.printStackTrace();
 			LOG.error(e.getMessage());
 		}
-		
-		while (true) {
+
+		while (!stopped) {
 			try {
 				update();
 			} catch (KeeperException e) {
@@ -90,6 +91,12 @@ public class NimbusSafetyNet implements Runnable {
 				LOG.error(e.getMessage());
 			}
 		}
+
+		LOG.info("Safety net offline");
+	}
+
+	public void stop() {
+		this.stopped = true;
 	}
 
 	/**
@@ -105,6 +112,9 @@ public class NimbusSafetyNet implements Runnable {
 	 */
 	private void update() throws KeeperException, InterruptedException {
 		if (rootWatcher.isTriggered()) {
+
+			LOG.info("Root watcher triggered");
+
 			rootWatcher.reset();
 			List<String> caches = Nimbus.getZooKeeper().getChildren(
 					Nimbus.ROOT_ZNODE, rootWatcher);
@@ -185,6 +195,7 @@ public class NimbusSafetyNet implements Runnable {
 	 *            The name of the Cache that was added.
 	 */
 	public synchronized void notifyCacheAdded(String name) {
+		LOG.info("Cache added: " + name);
 		for (ISafetyNetListener listener : listeners) {
 			listener.onCacheAdded(name);
 		}
@@ -198,6 +209,7 @@ public class NimbusSafetyNet implements Runnable {
 	 *            The name of the Cache that was removed.
 	 */
 	public synchronized void notifyCacheRemoved(String name) {
+		LOG.info("Cache removed: " + name);
 		for (ISafetyNetListener listener : listeners) {
 			listener.onCacheRemoved(name);
 		}
@@ -214,6 +226,7 @@ public class NimbusSafetyNet implements Runnable {
 	 */
 	public synchronized void notifyCacheletAdded(String cacheName,
 			String cacheletName) {
+		LOG.info("Cachelet added: " + cacheName + "\t" + cacheletName);
 		for (ISafetyNetListener listener : listeners) {
 			listener.onCacheletAdded(cacheName, cacheletName);
 		}
@@ -230,6 +243,7 @@ public class NimbusSafetyNet implements Runnable {
 	 */
 	public synchronized void notifyCacheletRemoved(String cacheName,
 			String cacheletName) {
+		LOG.info("Cachelet removed: " + cacheName + "\t" + cacheletName);
 		for (ISafetyNetListener listener : listeners) {
 			listener.onCacheletRemoved(cacheName, cacheletName);
 		}
@@ -247,6 +261,7 @@ public class NimbusSafetyNet implements Runnable {
 	 */
 	public synchronized void notifyCacheletStale(String cacheName,
 			String cacheletName) {
+		LOG.info("Cachelet stale: " + cacheName + "\t" + cacheletName);
 		for (ISafetyNetListener listener : listeners) {
 			listener.onCacheletStale(cacheName, cacheletName);
 		}

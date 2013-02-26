@@ -8,11 +8,11 @@ import java.net.SocketException;
 
 import nimbus.main.Nimbus;
 import nimbus.main.NimbusConf;
+import nimbus.main.NimbusShutdownHook;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
-
 
 public abstract class ICacheletWorker implements Runnable {
 
@@ -38,7 +38,7 @@ public abstract class ICacheletWorker implements Runnable {
 		out = new OutputStreamWriter(socket.getOutputStream());
 		in = new InputStreamReader(socket.getInputStream());
 	}
-	
+
 	/**
 	 * Processes requests from the client until the end of the stream is read or
 	 * the "kill" command is received.
@@ -50,11 +50,12 @@ public abstract class ICacheletWorker implements Runnable {
 			while ((inputLine = readLine()) != null) {
 				try {
 					if (inputLine.equals("kill")) {
-						LOG
-								.info("Kill command received. Deleting Bloom filter from HDFS and exiting...");
+						LOG.info("Kill command received. Deleting Bloom filter from HDFS and exiting...");
 
 						FileSystem.get(NimbusConf.getConf()).delete(
 								new Path(Nimbus.CACHELET_ZNODE), false);
+
+						NimbusShutdownHook.getInstance().cleanShutdown();
 
 						System.exit(0);
 					}
@@ -63,9 +64,7 @@ public abstract class ICacheletWorker implements Runnable {
 				} catch (Exception e) {
 					LOG.error("Caught exception while processing input");
 					e.printStackTrace();
-					out
-							.write("Caught exception: " + e.getMessage()
-									+ "\nEOS\n");
+					out.write("Caught exception: " + e.getMessage() + "\nEOS\n");
 					out.flush();
 				}
 			}
@@ -80,9 +79,9 @@ public abstract class ICacheletWorker implements Runnable {
 			LOG.error(e.getMessage());
 		}
 	}
-	
-	protected abstract void processMessage(String msg) throws IOException;	
-	
+
+	protected abstract void processMessage(String msg) throws IOException;
+
 	/**
 	 * Reads a line of input from the input stream.<br>
 	 * <br>

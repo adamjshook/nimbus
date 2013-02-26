@@ -120,11 +120,11 @@ public class NimbusMaster implements ISafetyNetListener {
 					Thread.sleep(50);
 				}
 
-				Nimbus.getZooKeeper().create(
-						CACHE_INFO_LOCK + "-" + cacheName, "".getBytes(),
-						Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+				Nimbus.getZooKeeper().create(CACHE_INFO_LOCK + "-" + cacheName,
+						"".getBytes(), Ids.OPEN_ACL_UNSAFE,
+						CreateMode.PERSISTENT);
 				locked = true;
-				LOG.debug("Got lock for Cache " + cacheName);
+				LOG.info("Got lock for Cache " + cacheName);
 			} catch (KeeperException e) {
 				if (!e.code().equals(Code.NODEEXISTS)) {
 					e.printStackTrace();
@@ -140,11 +140,11 @@ public class NimbusMaster implements ISafetyNetListener {
 	 */
 	public void releaseCacheInfoLock(String cacheName) {
 		try {
-			if (Nimbus.getZooKeeper().exists(
-					CACHE_INFO_LOCK + "-" + cacheName, false) != null) {
-				Nimbus.getZooKeeper().delete(
-						CACHE_INFO_LOCK + "-" + cacheName, -1);
-				LOG.debug("Released lock for Cache " + cacheName);
+			if (Nimbus.getZooKeeper().exists(CACHE_INFO_LOCK + "-" + cacheName,
+					false) != null) {
+				Nimbus.getZooKeeper().delete(CACHE_INFO_LOCK + "-" + cacheName,
+						-1);
+				LOG.info("Released lock for Cache " + cacheName);
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -265,6 +265,26 @@ public class NimbusMaster implements ISafetyNetListener {
 			}
 		} while (!false);
 
+		CacheInfo info = new CacheInfo();
+		info.setName(name);
+		info.setType(type);
+		info.setPort(port);
+
+		BigBitArray array = new BigBitArray(
+				BigBitArray.makeMultipleOfEight(NimbusConf.getConf()
+						.getNumNimbusCachelets()));
+		info.setAvailabilityArray(array.getBytes());
+
+		try {
+			Nimbus.getZooKeeper().create(Nimbus.ROOT_ZNODE + "/" + name,
+					info.getByteRepresentation(), Ids.OPEN_ACL_UNSAFE,
+					CreateMode.PERSISTENT);
+			LOG.info("Creating Cache ZNode at " + Nimbus.CACHE_ZNODE
+					+ " with data of size " + info.getByteRepresentation().length);
+		} catch (Exception e) {
+			throw new FailedToCreateCacheException(e.getMessage());
+		}
+
 		List<String> cmds = new ArrayList<String>();
 		cmds.add(NimbusConf.getConf().getNimbusHomeDir() + "/bin/start.sh");
 		cmds.add(name);
@@ -281,9 +301,6 @@ public class NimbusMaster implements ISafetyNetListener {
 
 		LOG.info("Starting process " + cmd);
 
-		p.environment().put("NIMBUS_HOME",
-				NimbusConf.getConf().getNimbusHomeDir());
-		p.environment().put("JAVA_HOME", NimbusConf.getConf().getJavaHomeDir());
 		String opts = NimbusConf.getConf().getJavaOpts();
 		if (opts != null && opts.length() != 0) {
 			p.environment().put("NIMBUS_JAVA_OPTS", opts);
@@ -297,6 +314,7 @@ public class NimbusMaster implements ISafetyNetListener {
 			if (proc.exitValue() == 0) {
 				LOG.info("Successfully created Cache " + name + " on port "
 						+ port);
+				printProcessLogs(proc);
 			} else {
 				LOG.error("Failed to create Cache " + name);
 				printProcessLogs(proc);
@@ -323,7 +341,6 @@ public class NimbusMaster implements ISafetyNetListener {
 	 * @return True if the Cache is destroyed, false if there is an error.
 	 */
 	public boolean destroy(String name) {
-		LOG.info("Killing Cache " + name);
 
 		try {
 			int port = getCachePort(name);
@@ -591,8 +608,8 @@ public class NimbusMaster implements ISafetyNetListener {
 	 */
 	private void printProcessLogs(Process proc) {
 		try {
-			BufferedReader rdr = new BufferedReader(new InputStreamReader(proc
-					.getInputStream()));
+			BufferedReader rdr = new BufferedReader(new InputStreamReader(
+					proc.getInputStream()));
 
 			LOG.info("Printing stdout");
 			String s;
@@ -601,8 +618,8 @@ public class NimbusMaster implements ISafetyNetListener {
 			}
 			rdr.close();
 
-			rdr = new BufferedReader(new InputStreamReader(proc
-					.getErrorStream()));
+			rdr = new BufferedReader(new InputStreamReader(
+					proc.getErrorStream()));
 
 			LOG.info("Printing stderr");
 			while ((s = rdr.readLine()) != null) {
