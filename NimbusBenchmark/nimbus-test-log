@@ -1,0 +1,5 @@
+Ingesting file hdfs://nimbus-1:9000/user/mrdp/bigtest/data-1073741824B-32c-32537631... Done.  Took 608939ms.
+Analyzing file hdfs://nimbus-1:9000/user/mrdp/bigtest/data-1073741824B-32c-32537631 w/0.0 hit percentage... Done.  Took 84105ms.
+Hits: 0.0  Accum Time: 0.0  Avg: NaN
+DL Time: 147786.0
+Analyzing file hdfs://nimbus-1:9000/user/mrdp/bigtest/data-1073741824B-32c-32537631 w/0.01 hit percentage...

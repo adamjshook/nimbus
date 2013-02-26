@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry excluding=".svn/|com/.svn/|com/clearedgeit/.svn/|com/clearedgeit/dcache/.svn/|com/clearedgeit/dcache/bloom/.svn/|com/clearedgeit/dcache/client/.svn/|com/clearedgeit/dcache/master/.svn/|com/clearedgeit/dcache/protocols/.svn/|com/clearedgeit/dcache/server/.svn/|com/clearedgeit/dcache/utils/.svn/" kind="src" path="src/main/java">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/home/ashook/dcache/Sandbox/native"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="src/test/java">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/home/ashook/dcache/Sandbox/native"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
+	<classpathentry kind="output" path="build"/>
+</classpath>
