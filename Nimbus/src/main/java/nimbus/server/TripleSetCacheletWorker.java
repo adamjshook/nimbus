@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import nimbus.main.NimbusConf;
-import nimbus.utils.Triple;
+import nimbus.nativestructs.Triple;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;

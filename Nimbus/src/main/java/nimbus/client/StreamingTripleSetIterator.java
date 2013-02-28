@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
+import nimbus.nativestructs.Triple;
 import nimbus.server.TripleSetCacheletWorker;
-import nimbus.utils.Triple;
 
 public class StreamingTripleSetIterator implements Iterator<Triple> {
 

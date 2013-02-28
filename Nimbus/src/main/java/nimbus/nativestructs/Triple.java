@@ -1,4 +1,4 @@
-package nimbus.utils;
+package nimbus.nativestructs;
 
 public class Triple {
 

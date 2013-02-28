@@ -17,9 +17,9 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 
 import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
+import nimbus.nativestructs.Triple;
+import nimbus.nativestructs.TripleSet;
 import nimbus.utils.ICacheletHash;
-import nimbus.utils.Triple;
-import nimbus.utils.TripleSet;
 
 public class TripleSetCacheletServer extends ICacheletServer {
 

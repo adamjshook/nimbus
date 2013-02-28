@@ -1,4 +1,4 @@
-package nimbus.utils;
+package nimbus.nativestructs;
 
 import java.util.Collection;
 import java.util.Iterator;

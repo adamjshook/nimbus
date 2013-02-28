@@ -50,7 +50,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 	private boolean connected = false;
 
 	public static Watcher getBlankWatcher() {
-		return new BlankZKWatcher();
+		return new NullWatcher();
 	}
 
 	public static Watcher getConnectWatcher(ConnectListener listener) {
@@ -171,7 +171,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 			LOG.info("Created " + absPath);
 		} catch (KeeperException e) {
 			if (e.code().equals(Code.NONODE)) {
-				throw new ZooKeeperAssistantException(
+				throw new ZKAssistantException(
 						"A parent node does not exist for " + absPath);
 			} else {
 				LOG.error(e);
@@ -181,13 +181,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 								Ids.OPEN_ACL_UNSAFE, mode);
 					} catch (KeeperException e1) {
 						e1.printStackTrace();
-						throw new ZooKeeperAssistantException(e1);
+						throw new ZKAssistantException(e1);
 					} catch (InterruptedException e1) {
 						e1.printStackTrace();
-						throw new ZooKeeperAssistantException(e1);
+						throw new ZKAssistantException(e1);
 					}
 				} else {
-					throw new ZooKeeperAssistantException(
+					throw new ZKAssistantException(
 							"Unable to reconnect or unsupported error code");
 				}
 			}
@@ -196,9 +196,9 @@ public class ZooKeeperAssistant implements ConnectListener {
 			try {
 				keeper.create(absPath, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, mode);
 			} catch (KeeperException e1) {
-				throw new ZooKeeperAssistantException(e1);
+				throw new ZKAssistantException(e1);
 			} catch (InterruptedException e1) {
-				throw new ZooKeeperAssistantException(e1);
+				throw new ZKAssistantException(e1);
 			}
 		}
 	}
@@ -225,7 +225,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 						makeRecursivePaths(absPath, mode);
 					} else {
 						LOG.error(e);
-						throw new ZooKeeperAssistantException(
+						throw new ZKAssistantException(
 								"Unable to reconnect or unsupported error code");
 					}
 				}
@@ -245,7 +245,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 						+ (keeper.exists(absPath, false) != null));
 				return keeper.exists(absPath, false) != null;
 			} else {
-				throw new ZooKeeperAssistantException(
+				throw new ZKAssistantException(
 						"Given path does not start with " + path
 								+ ".  Returning null.");
 			}
@@ -256,13 +256,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 					return keeper.exists(absPath, false) != null;
 				} catch (KeeperException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				}
 			} else {
-				throw new ZooKeeperAssistantException(
+				throw new ZKAssistantException(
 						"Unable to reconnect or unsupported error code");
 			}
 		} catch (InterruptedException e) {
@@ -270,9 +270,9 @@ public class ZooKeeperAssistant implements ConnectListener {
 			try {
 				return keeper.exists(absPath, false) != null;
 			} catch (KeeperException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			} catch (InterruptedException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			}
 		}
 	}
@@ -293,13 +293,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 									.size();
 						} catch (KeeperException e1) {
 							e1.printStackTrace();
-							throw new ZooKeeperAssistantException(e);
+							throw new ZKAssistantException(e);
 						} catch (InterruptedException e1) {
 							e1.printStackTrace();
-							throw new ZooKeeperAssistantException(e);
+							throw new ZKAssistantException(e);
 						}
 					} else {
-						throw new ZooKeeperAssistantException(
+						throw new ZKAssistantException(
 								"Unable to reconnect or unsupported error code");
 					}
 				} catch (InterruptedException e) {
@@ -307,9 +307,9 @@ public class ZooKeeperAssistant implements ConnectListener {
 					try {
 						numChildren = keeper.getChildren(absPath, false).size();
 					} catch (KeeperException e1) {
-						throw new ZooKeeperAssistantException(e);
+						throw new ZKAssistantException(e);
 					} catch (InterruptedException e1) {
-						throw new ZooKeeperAssistantException(e);
+						throw new ZKAssistantException(e);
 					}
 				}
 
@@ -326,13 +326,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 									keeper.delete(absPath, -1);
 								} catch (KeeperException e1) {
 									e1.printStackTrace();
-									throw new ZooKeeperAssistantException(e);
+									throw new ZKAssistantException(e);
 								} catch (InterruptedException e1) {
 									e1.printStackTrace();
-									throw new ZooKeeperAssistantException(e);
+									throw new ZKAssistantException(e);
 								}
 							} else {
-								throw new ZooKeeperAssistantException(
+								throw new ZKAssistantException(
 										"Unable to reconnect or unsupported error code");
 							}
 						} catch (InterruptedException e) {
@@ -340,14 +340,14 @@ public class ZooKeeperAssistant implements ConnectListener {
 							try {
 								keeper.delete(absPath, -1);
 							} catch (KeeperException e1) {
-								throw new ZooKeeperAssistantException(e);
+								throw new ZKAssistantException(e);
 							} catch (InterruptedException e1) {
-								throw new ZooKeeperAssistantException(e);
+								throw new ZKAssistantException(e);
 							}
 						}
 					}
 				} else if (numChildren != 0) {
-					throw new ZooKeeperAssistantException("Node " + absPath
+					throw new ZKAssistantException("Node " + absPath
 							+ " has children.  Must do recursive delete.");
 				} else {
 					try {
@@ -359,13 +359,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 								keeper.delete(absPath, -1);
 							} catch (KeeperException e1) {
 								e1.printStackTrace();
-								throw new ZooKeeperAssistantException(e);
+								throw new ZKAssistantException(e);
 							} catch (InterruptedException e1) {
 								e1.printStackTrace();
-								throw new ZooKeeperAssistantException(e);
+								throw new ZKAssistantException(e);
 							}
 						} else {
-							throw new ZooKeeperAssistantException(
+							throw new ZKAssistantException(
 									"Unable to reconnect or unsupported error code");
 						}
 					} catch (InterruptedException e) {
@@ -373,9 +373,9 @@ public class ZooKeeperAssistant implements ConnectListener {
 						try {
 							keeper.delete(absPath, -1);
 						} catch (KeeperException e1) {
-							throw new ZooKeeperAssistantException(e);
+							throw new ZKAssistantException(e);
 						} catch (InterruptedException e1) {
-							throw new ZooKeeperAssistantException(e);
+							throw new ZKAssistantException(e);
 						}
 					}
 				}
@@ -385,7 +385,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 			if (reconnect(e)) {
 				deletePaths(path, recursive);
 			} else {
-				throw new ZooKeeperAssistantException(
+				throw new ZKAssistantException(
 						"Unable to reconnect or unsupported error code");
 			}
 		} catch (InterruptedException e) {
@@ -406,13 +406,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 					children = keeper.getChildren(path, false);
 				} catch (KeeperException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				}
 			} else {
-				throw new ZooKeeperAssistantException(
+				throw new ZKAssistantException(
 						"Unable to reconnect or unsupported error code");
 			}
 		} catch (InterruptedException e) {
@@ -420,9 +420,9 @@ public class ZooKeeperAssistant implements ConnectListener {
 			try {
 				children = keeper.getChildren(path, false);
 			} catch (KeeperException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			} catch (InterruptedException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			}
 		}
 
@@ -439,13 +439,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 					keeper.delete(path, -1);
 				} catch (KeeperException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				}
 			} else {
-				throw new ZooKeeperAssistantException(
+				throw new ZKAssistantException(
 						"Unable to reconnect or unsupported error code");
 			}
 		} catch (InterruptedException e) {
@@ -453,9 +453,9 @@ public class ZooKeeperAssistant implements ConnectListener {
 			try {
 				keeper.delete(path, -1);
 			} catch (KeeperException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			} catch (InterruptedException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			}
 		}
 	}
@@ -537,13 +537,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 					}
 				} catch (KeeperException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				}
 			} else {
-				throw new ZooKeeperAssistantException(
+				throw new ZKAssistantException(
 						"Unable to reconnect or unsupported error code");
 			}
 		} catch (InterruptedException e) {
@@ -555,9 +555,9 @@ public class ZooKeeperAssistant implements ConnectListener {
 					data = keeper.getData(makeAbsolutePath(path), false, null);
 				}
 			} catch (KeeperException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			} catch (InterruptedException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			}
 		}
 
@@ -575,7 +575,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 		if (absPath == null) {
 			LOG.error("Given value " + path
 					+ " does not form to this Assistant's configuration");
-			throw new ZooKeeperAssistantException("Given value " + path
+			throw new ZKAssistantException("Given value " + path
 					+ " does not form to this Assistant's configuration");
 		}
 
@@ -588,13 +588,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 					keeper.setData(absPath, data, -1);
 				} catch (KeeperException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				}
 			} else {
-				throw new ZooKeeperAssistantException(
+				throw new ZKAssistantException(
 						"Unable to reconnect or unsupported error code");
 			}
 		} catch (InterruptedException e) {
@@ -602,9 +602,9 @@ public class ZooKeeperAssistant implements ConnectListener {
 			try {
 				keeper.setData(absPath, data, -1);
 			} catch (KeeperException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			} catch (InterruptedException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			}
 		}
 
@@ -773,7 +773,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 		if (absPath == null) {
 			LOG.error("Given value " + path
 					+ " does not form to this Assistant's configuration");
-			throw new ZooKeeperAssistantException("Given value " + path
+			throw new ZKAssistantException("Given value " + path
 					+ " does not form to this Assistant's configuration");
 		}
 
@@ -794,13 +794,13 @@ public class ZooKeeperAssistant implements ConnectListener {
 					}
 				} catch (KeeperException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
-					throw new ZooKeeperAssistantException(e);
+					throw new ZKAssistantException(e);
 				}
 			} else {
-				throw new ZooKeeperAssistantException(
+				throw new ZKAssistantException(
 						"Unable to reconnect or unsupported error code");
 			}
 		} catch (InterruptedException e) {
@@ -812,9 +812,9 @@ public class ZooKeeperAssistant implements ConnectListener {
 					return keeper.getChildren(absPath, false);
 				}
 			} catch (KeeperException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			} catch (InterruptedException e1) {
-				throw new ZooKeeperAssistantException(e);
+				throw new ZKAssistantException(e);
 			}
 		}
 	}

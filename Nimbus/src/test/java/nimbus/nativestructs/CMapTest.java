@@ -1,7 +1,9 @@
-package nimbus.utils;
+package nimbus.nativestructs;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import nimbus.nativestructs.CMap;
 
 import org.junit.After;
 import org.junit.Assert;

@@ -6,10 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import nimbus.main.NimbusConf;
+import nimbus.nativestructs.CSet;
 
 import org.apache.log4j.Logger;
 
-import nimbus.utils.CSet;
 
 /**
  * A Cachelet opens up a server on the given port and creates an appropriate

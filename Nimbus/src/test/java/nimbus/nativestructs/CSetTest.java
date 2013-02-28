@@ -1,7 +1,9 @@
-package nimbus.utils;
+package nimbus.nativestructs;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import nimbus.nativestructs.CSet;
 
 import org.junit.After;
 import org.junit.Assert;

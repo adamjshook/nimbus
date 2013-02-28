@@ -14,11 +14,11 @@ import org.apache.log4j.Logger;
 import nimbus.server.TripleSetCacheletWorker;
 import nimbus.utils.BigBitArray;
 import nimbus.utils.ICacheletHash;
-import nimbus.utils.Triple;
 import nimbus.utils.DataZNodeWatcher;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
+import nimbus.nativestructs.Triple;
 
 public class NimbusTripleSetClient {
 

@@ -1,8 +1,11 @@
-package nimbus.utils;
+package nimbus.nativestructs;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import nimbus.nativestructs.CList;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

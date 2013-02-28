@@ -16,8 +16,8 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 
 import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
+import nimbus.nativestructs.CSet;
 import nimbus.utils.BloomFilter;
-import nimbus.utils.CSet;
 import nimbus.utils.ICacheletHash;
 
 public class SetCacheletServer extends ICacheletServer {

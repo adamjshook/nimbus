@@ -1,10 +1,13 @@
-package nimbus.utils;
+package nimbus.nativestructs;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import junit.framework.Assert;
+
+import nimbus.nativestructs.Triple;
+import nimbus.nativestructs.TripleSet;
 
 import org.junit.After;
 import org.junit.Before;

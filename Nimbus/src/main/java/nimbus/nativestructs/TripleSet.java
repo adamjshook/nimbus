@@ -1,4 +1,4 @@
-package nimbus.utils;
+package nimbus.nativestructs;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -7,6 +7,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
+import nimbus.utils.NullIterator;
 
 public class TripleSet {
 
