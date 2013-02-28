@@ -16,7 +16,7 @@ public class CacheInfo {
 
 	private String name = null;
 	private int port = -1;
-	private CacheType type =  null;
+	private CacheType type = null;
 	private String filename = null;
 	private int approxNumRecords = 0;
 	private float falsePosRate = 0f;
@@ -42,14 +42,14 @@ public class CacheInfo {
 		name = strm.readUTF();
 		port = strm.readInt();
 		type = CacheType.valueOf(strm.readUTF());
-		
+
 		filename = strm.readUTF();
 		if (filename.equals("null")) {
 			filename = null;
 		}
 		approxNumRecords = strm.readInt();
 		falsePosRate = strm.readFloat();
-		
+
 		int len = strm.readInt();
 		availability = new byte[len];
 		strm.read(availability, 0, len);
@@ -61,31 +61,35 @@ public class CacheInfo {
 	 * Serializes this object to a byte array and returns it.
 	 * 
 	 * @return A byte representation.
-	 * @throws IOException
-	 *             If an error occurs when serializing to the byte array.
 	 */
-	public byte[] getByteRepresentation() throws IOException {
-		ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
-		DataOutputStream strm = new DataOutputStream(bytestream);
+	public byte[] getByteRepresentation() {
+		try {
+			ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
+			DataOutputStream strm = new DataOutputStream(bytestream);
 
-		strm.writeUTF(name);
-		strm.writeInt(port);
-		strm.writeUTF(type.name());
-		
-		if (filename == null) {
-			strm.writeUTF("null");
-		} else {
-			strm.writeUTF(filename);
+			strm.writeUTF(name);
+			strm.writeInt(port);
+			strm.writeUTF(type.name());
+
+			if (filename == null) {
+				strm.writeUTF("null");
+			} else {
+				strm.writeUTF(filename);
+			}
+			strm.writeInt(approxNumRecords);
+			strm.writeFloat(falsePosRate);
+
+			strm.writeInt(availability.length);
+			strm.write(availability);
+
+			strm.flush();
+			strm.close();
+			return bytestream.toByteArray();
+		} catch (IOException e) {
+			// Could this even really happen?
+			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
-		strm.writeInt(approxNumRecords);
-		strm.writeFloat(falsePosRate);
-		
-		strm.writeInt(availability.length);
-		strm.write(availability);
-
-		strm.flush();
-		strm.close();
-		return bytestream.toByteArray();
 	}
 
 	/**
@@ -182,11 +186,11 @@ public class CacheInfo {
 	public String getFilename() {
 		return filename;
 	}
-	
+
 	public void setApproxNumRecords(int approxNumRecords) {
 		this.approxNumRecords = approxNumRecords;
 	}
-	
+
 	public int getApproxNumRecords() {
 		return approxNumRecords;
 	}
@@ -194,7 +198,7 @@ public class CacheInfo {
 	public void setFalsePosRate(float falsePosRate) {
 		this.falsePosRate = falsePosRate;
 	}
-	
+
 	public float getFalsePosRate() {
 		return falsePosRate;
 	}

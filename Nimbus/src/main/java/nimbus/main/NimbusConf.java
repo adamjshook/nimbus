@@ -41,6 +41,8 @@ public class NimbusConf extends Configuration {
 	public static final String NIMBUS_SAFETY_NET_ENABLED = "nimbus.safety.net.enabled";
 	public static final String NIMBUS_CACHELET_HEARTBEAT = "nimbus.cachelet.heartbeat";
 	public static final String NIMBUS_REPLICATION_FACTOR = "nimbus.replication.factor";
+	public static final String ZK_ASSISTANT_ROOT_PATH = "zk.assistant.root.path";
+	public static final String ZK_SESSION_TIMEOUT = "zk.session.timeout";
 
 	private static NimbusConf s_instance = null;
 
@@ -194,5 +196,15 @@ public class NimbusConf extends Configuration {
 			LOG.info("Adding " + resource + " to nimbus conf");
 			s_instance.addResource(new Path(confFile.toString()));
 		}
+	}
+
+	public String getZooKeeperRootPath() {
+		return s_instance.get(ZK_ASSISTANT_ROOT_PATH)
+				+ (s_instance.get(ZK_ASSISTANT_ROOT_PATH).endsWith("/") ? ""
+						: "/");
+	}
+
+	public int getZKSessionTimeout() {
+		return Integer.parseInt(s_instance.get(ZK_SESSION_TIMEOUT));
 	}
 }

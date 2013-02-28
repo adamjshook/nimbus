@@ -11,7 +11,6 @@ import nimbus.main.NimbusConf;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -47,14 +46,8 @@ public class TripleSetCacheletServer extends ICacheletServer {
 			this.distributedLoadFromHDFS(new Path(info.getFilename()),
 					NimbusMaster.getInstance().getCacheletID(cacheletName));
 		} else { // leave watch on node for when it does change.
-			try {
-				Nimbus.getZooKeeper().getData(Nimbus.CACHE_ZNODE,
-						new CacheletDataWatcher(this), null);
-			} catch (KeeperException e) {
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			Nimbus.getZooKeeper().getDataVariable(Nimbus.CACHE_ZNODE,
+					new CacheletDataWatcher(this), null);
 		}
 
 		acceptConnections();

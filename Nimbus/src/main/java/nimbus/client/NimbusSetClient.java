@@ -11,8 +11,6 @@ import nimbus.main.NimbusConf;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Stat;
 
 import nimbus.server.SetCacheletServer;
 import nimbus.server.SetCacheletWorker;
@@ -39,10 +37,10 @@ public class NimbusSetClient {
 	private ICacheletHash cacheletHash = ICacheletHash.getInstance();
 	private BigBitArray availabilityArray = null;
 	private DataZNodeWatcher watcher = new DataZNodeWatcher();
-	private Stat stat = new Stat();
 	private int contains_numdown = 0;
 	private String cacheName = null;
 	private int replication;
+	private DSetCacheletConnection contains_connect_tmp;
 
 	/**
 	 * Initializes a connection to a Nimbus distributed set. Downloads the Bloom
@@ -91,17 +89,9 @@ public class NimbusSetClient {
 			downloadBFilters();
 		}
 
-		try {
-			CacheInfo info = new CacheInfo(Nimbus.getZooKeeper().getData(
-					Nimbus.ROOT_ZNODE + "/" + cacheName, watcher, stat));
-			availabilityArray = new BigBitArray(info.getAvailabilityArray());
-		} catch (KeeperException e) {
-			e.printStackTrace();
-			throw new RuntimeException("ZooKeeper error.");
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			throw new RuntimeException("ZooKeeper error.");
-		}
+		CacheInfo info = new CacheInfo(Nimbus.getZooKeeper().getDataVariable(
+				cacheName, watcher, null));
+		availabilityArray = new BigBitArray(info.getAvailabilityArray());
 	}
 
 	/**
@@ -138,7 +128,7 @@ public class NimbusSetClient {
 		info.setFalsePosRate(falsePosRate);
 		NimbusMaster.getInstance().setCacheInfo(cacheName, info);
 		NimbusMaster.getInstance().releaseCacheInfoLock(cacheName);
-		
+
 		/*
 		 * for (int i = 0; i < list.size(); ++i) { list.get(i).read(p,
 		 * approxNumRecords, falsePosRate, i); }
@@ -146,30 +136,23 @@ public class NimbusSetClient {
 
 		do {
 			if (watcher.isTriggered()) {
-				try {
-					watcher.reset();
-					info = new CacheInfo(Nimbus.getZooKeeper().getData(
-							Nimbus.ROOT_ZNODE + "/" + cacheName, watcher, stat));
-					availabilityArray = new BigBitArray(info
-							.getAvailabilityArray());
+				watcher.reset();
 
-					int numon = 0;
-					for (int i = 0; i < list.values().size(); ++i) {
-						if (availabilityArray.isBitOn(i)) {
-							++numon;
-						}
-					}
+				info = new CacheInfo(Nimbus.getZooKeeper().getDataVariable(
+						cacheName, watcher, null));
 
-					if (numon >= NimbusConf.getConf().getNumNimbusCachelets()
-							- (NimbusConf.getConf().getReplicationFactor() - 1)) {
-						break;
+				availabilityArray = new BigBitArray(info.getAvailabilityArray());
+
+				int numon = 0;
+				for (int i = 0; i < list.values().size(); ++i) {
+					if (availabilityArray.isBitOn(i)) {
+						++numon;
 					}
-				} catch (KeeperException e) {
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
+				}
+
+				if (numon >= NimbusConf.getConf().getNumNimbusCachelets()
+						- (NimbusConf.getConf().getReplicationFactor() - 1)) {
+					break;
 				}
 			} else {
 				try {
@@ -180,29 +163,11 @@ public class NimbusSetClient {
 			}
 		} while (true);
 
-		/*
-		 * for (DSetCacheletConnection cachelet : list.values()) { if
-		 * (!Boolean.parseBoolean(cachelet.readLine())) { throw new
-		 * IOException("Failed to read file."); } }
-		 */
-
 		if (download) {
 			downloadBFilters();
 		}
 	}
 
-	/*
-	/**
-	 * Clears this set of all elements.
-	 * 
-	 * @throws IOException
-	 *
-	public void clear() throws IOException {
-		for (DSetCacheletConnection set : list.values()) {
-			set.clear();
-		}
-	}
-	*/
 	/**
 	 * Determines if a given element is a member of the set.
 	 * 
@@ -218,7 +183,6 @@ public class NimbusSetClient {
 	 *             If all the Cachelets that would store the given element are
 	 *             unavailable.
 	 */
-	private DSetCacheletConnection contains_connect_tmp;
 
 	public boolean contains(String element)
 			throws CacheletsUnavailableException {
@@ -226,8 +190,10 @@ public class NimbusSetClient {
 		if (watcher.isTriggered()) {
 			try {
 				watcher.reset();
-				CacheInfo info = new CacheInfo(Nimbus.getZooKeeper().getData(
-						Nimbus.ROOT_ZNODE + "/" + cacheName, watcher, stat));
+
+				CacheInfo info = new CacheInfo(Nimbus.getZooKeeper()
+						.getDataVariable(cacheName, watcher, null));
+
 				availabilityArray = new BigBitArray(info.getAvailabilityArray());
 
 				for (int i = 0; i < list.values().size(); ++i) {
@@ -238,10 +204,6 @@ public class NimbusSetClient {
 								+ " due to Watch triggered.");
 					}
 				}
-			} catch (KeeperException e) {
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -266,11 +228,9 @@ public class NimbusSetClient {
 						LOG.info("Caught CacheletNotConnectedException for ID "
 								+ cacheletID + ".  Attempting reconnect...");
 						contains_connect_tmp.connect();
-						filters.put(cacheletID, contains_connect_tmp
-								.getBloomFilter());
-						LOG
-								.info("Successfully reconnected to ID "
-										+ cacheletID);
+						filters.put(cacheletID,
+								contains_connect_tmp.getBloomFilter());
+						LOG.info("Successfully reconnected to ID " + cacheletID);
 						if (++contains_numdown == replication) {
 							throw new CacheletsUnavailableException();
 						}
@@ -395,19 +355,16 @@ public class NimbusSetClient {
 			this.cacheletName = cacheletName;
 			connect();
 		}
-		
+
 		/*
-		/**
-		 * Clears this Cachelet of all elements.
+		 * /** Clears this Cachelet of all elements.
 		 * 
-		 * @throws IOException
-		 *             If an error occurs when sending the request.
-		 *
-		public void clear() throws IOException {
-			writeLine(Integer.toString(DSetCacheletWorker.CLEAR));
-			dumpResponses();
-		}
-		*/
+		 * @throws IOException If an error occurs when sending the request.
+		 * 
+		 * public void clear() throws IOException {
+		 * writeLine(Integer.toString(DSetCacheletWorker.CLEAR));
+		 * dumpResponses(); }
+		 */
 
 		/**
 		 * Sends a request to the Cachelet to determine if the given element is
@@ -455,8 +412,9 @@ public class NimbusSetClient {
 		 *             deserializing the filter.
 		 */
 		public BloomFilter getBloomFilter() throws IOException {
-			BloomFilter bf = new BloomFilter(SetCacheletServer
-					.getBloomFilterPath(cacheName, cacheletName));
+			BloomFilter bf = new BloomFilter(
+					SetCacheletServer.getBloomFilterPath(cacheName,
+							cacheletName));
 			if (LOG.isDebugEnabled()) {
 				LOG.debug(bf.toString());
 			}

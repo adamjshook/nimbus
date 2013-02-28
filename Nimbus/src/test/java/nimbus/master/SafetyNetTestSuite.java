@@ -10,13 +10,10 @@ import nimbus.main.NimbusConf;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import nimbus.utils.NimbusZKClear;
 
 public class SafetyNetTestSuite implements ISafetyNetListener {
 	private boolean notifiedcacheletadded = false,
@@ -28,16 +25,12 @@ public class SafetyNetTestSuite implements ISafetyNetListener {
 	public void setup() throws IOException, KeeperException,
 			InterruptedException {
 		System.out.println("setupcalled");
-		NimbusZKClear.clear();
+
+		Nimbus.getZooKeeper().deletePaths(Nimbus.ROOT_ZNODE, true);
+
 		Thread.sleep(1000);
-		try {
-			Nimbus.getZooKeeper().create(Nimbus.ROOT_ZNODE, "".getBytes(),
-					Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-		} catch (KeeperException e) {
-			if (!e.code().equals(Code.NODEEXISTS)) {
-				throw e;
-			}
-		}
+
+		Nimbus.getZooKeeper().makePaths(Nimbus.ROOT_ZNODE);
 
 		Thread t = new Thread(NimbusSafetyNet.getInstance());
 		t.start();
@@ -46,7 +39,7 @@ public class SafetyNetTestSuite implements ISafetyNetListener {
 
 	@Test
 	public void test() throws KeeperException, InterruptedException {
-		ZooKeeper zk = Nimbus.getZooKeeper();
+		ZooKeeper zk = Nimbus.getZooKeeper().getZooKeeper();
 
 		notifiedcacheadded = false;
 		zk.create(Nimbus.ROOT_ZNODE + "/testcache", "".getBytes(),
@@ -85,7 +78,7 @@ public class SafetyNetTestSuite implements ISafetyNetListener {
 	@Test
 	public void testHeartbeat() throws KeeperException, InterruptedException,
 			IOException {
-		ZooKeeper zk = Nimbus.getZooKeeper();
+		ZooKeeper zk = Nimbus.getZooKeeper().getZooKeeper();
 
 		notifiedcacheadded = false;
 		zk.create(Nimbus.ROOT_ZNODE + "/testcache", "".getBytes(),
@@ -107,9 +100,7 @@ public class SafetyNetTestSuite implements ISafetyNetListener {
 			Thread.sleep(100);
 		}
 
-		Thread
-				.sleep((long) ((float) NimbusConf.getConf()
-						.getSafetyNetTimeout() * 1.5f));
+		Thread.sleep((long) ((float) NimbusConf.getConf().getSafetyNetTimeout() * 1.5f));
 		assertTrue(notifiedcachestale);
 	}
 

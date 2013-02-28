@@ -14,7 +14,7 @@
   <!-- Default value is localhost:2181 -->
   <property>
     <name>zookeeper.quorum.servers</name>
-    <value>nimbus-1:2181</value>
+    <value>nimbus-1:2181,nimbus-2:2181,nimbus-3:2181</value>
   </property>
 
   <!-- The nimbus.home property is the home directory where Nimbus is installed. -->

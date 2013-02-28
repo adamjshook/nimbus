@@ -4,7 +4,6 @@ import nimbus.main.Nimbus;
 import nimbus.main.NimbusConf;
 
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Stat;
 
 import nimbus.utils.DataZNodeWatcher;
 
@@ -22,7 +21,6 @@ public class CacheletZNode {
 	private String cacheletPath = null;
 
 	private DataZNodeWatcher datawatcher = new DataZNodeWatcher();
-	private Stat stat = new Stat();
 
 	/**
 	 * Initializes a new instance of a CacheletZNode.
@@ -41,7 +39,7 @@ public class CacheletZNode {
 		this.cacheletPath = Nimbus.ROOT_ZNODE + "/" + cacheName + "/"
 				+ cacheletName;
 
-		Nimbus.getZooKeeper().getData(cacheletPath, datawatcher, stat);
+		Nimbus.getZooKeeper().getDataVariable(cacheletPath, datawatcher, null);
 	}
 
 	/**
@@ -56,10 +54,10 @@ public class CacheletZNode {
 			return;
 		} else if (datawatcher.isTriggered()) {
 			datawatcher.reset();
-			Nimbus.getZooKeeper().getData(cacheletPath, datawatcher, stat);
+			Nimbus.getZooKeeper().getDataVariable(cacheletPath, datawatcher,
+					null);
 		} else if (datawatcher.getElapsedTriggerTime() > NimbusConf.getConf()
-				.getSafetyNetTimeout()
-				&& !datawatcher.getNotified()) {
+				.getSafetyNetTimeout() && !datawatcher.getNotified()) {
 			NimbusSafetyNet.getInstance().notifyCacheletStale(cacheName,
 					cacheletName);
 			datawatcher.setNotified(true);

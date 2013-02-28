@@ -13,10 +13,6 @@ import nimbus.main.NimbusConf;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.KeeperException.Code;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.data.Stat;
 
 import nimbus.client.BaseNimbusClient;
 import nimbus.client.MasterClient;
@@ -91,16 +87,7 @@ public class NimbusMaster implements ISafetyNetListener {
 	 * @return If the Cache exists.
 	 */
 	public boolean exists(String name) {
-		try {
-			return Nimbus.getZooKeeper().exists(Nimbus.ROOT_ZNODE + "/" + name,
-					false) != null ? true : false;
-		} catch (KeeperException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
-		}
+		return Nimbus.getZooKeeper().exists(name);
 	}
 
 	/**
@@ -114,24 +101,23 @@ public class NimbusMaster implements ISafetyNetListener {
 	public void getCacheInfoLock(String cacheName) {
 		boolean locked = false;
 		do {
-			try {
-				while (Nimbus.getZooKeeper().exists(
-						CACHE_INFO_LOCK + "-" + cacheName, false) != null) {
+			LOG.info("Getting lock for " + cacheName);
+			while (Nimbus.getZooKeeper().exists(
+					CACHE_INFO_LOCK + "-" + cacheName)) {
+				try {
+					LOG.info("Somebody already has it... waiting");
 					Thread.sleep(50);
-				}
+				} catch (InterruptedException e) {
 
-				Nimbus.getZooKeeper().create(CACHE_INFO_LOCK + "-" + cacheName,
-						"".getBytes(), Ids.OPEN_ACL_UNSAFE,
-						CreateMode.PERSISTENT);
-				locked = true;
-				LOG.info("Got lock for Cache " + cacheName);
-			} catch (KeeperException e) {
-				if (!e.code().equals(Code.NODEEXISTS)) {
-					e.printStackTrace();
 				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
 			}
+
+			Nimbus.getZooKeeper().makePaths(CACHE_INFO_LOCK + "-" + cacheName,
+					CreateMode.EPHEMERAL);
+
+			locked = true;
+			LOG.info("Got lock for Cache " + cacheName);
+
 		} while (!locked);
 	}
 
@@ -139,17 +125,10 @@ public class NimbusMaster implements ISafetyNetListener {
 	 * Releases the CacheInfo lock.
 	 */
 	public void releaseCacheInfoLock(String cacheName) {
-		try {
-			if (Nimbus.getZooKeeper().exists(CACHE_INFO_LOCK + "-" + cacheName,
-					false) != null) {
-				Nimbus.getZooKeeper().delete(CACHE_INFO_LOCK + "-" + cacheName,
-						-1);
-				LOG.info("Released lock for Cache " + cacheName);
-			}
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} catch (KeeperException e) {
-			e.printStackTrace();
+		if (Nimbus.getZooKeeper().exists(CACHE_INFO_LOCK + "-" + cacheName)) {
+			Nimbus.getZooKeeper().deletePaths(
+					CACHE_INFO_LOCK + "-" + cacheName, false);
+			LOG.info("Released lock for Cache " + cacheName);
 		}
 	}
 
@@ -163,22 +142,16 @@ public class NimbusMaster implements ISafetyNetListener {
 	 *             If any other ZooKeeper related error occurs.
 	 */
 	public CacheInfo getCacheInfo(String name) {
-		Stat stat = new Stat();
-		try {
-			return new CacheInfo(Nimbus.getZooKeeper().getData(
-					Nimbus.ROOT_ZNODE + "/" + name, false, stat));
-		} catch (KeeperException e) {
-			if (e.code().equals(Code.NONODE)) {
+		if (Nimbus.getZooKeeper().exists(name)) {
+			try {
+				return new CacheInfo(Nimbus.getZooKeeper().getDataVariable(
+						Nimbus.ROOT_ZNODE + "/" + name));
+			} catch (IOException e) {
+				e.printStackTrace();
 				return null;
 			}
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
+		} else {
+			return null;
 		}
 	}
 
@@ -190,26 +163,16 @@ public class NimbusMaster implements ISafetyNetListener {
 	 *            The Cache information to set.
 	 * @return True if the operation was successful, false if the Cache does not
 	 *         exist.
-	 * @throws RuntimeException
-	 *             If any other ZooKeeper related error occurs.
 	 */
 	public boolean setCacheInfo(String name, CacheInfo info) {
-		try {
-			Nimbus.getZooKeeper().setData(Nimbus.ROOT_ZNODE + "/" + name,
-					info.getByteRepresentation(), -1);
+		if (Nimbus.getZooKeeper().exists(name)) {
+
+			Nimbus.getZooKeeper().setDataVariable(name,
+					info.getByteRepresentation());
+
 			return true;
-		} catch (KeeperException e) {
-			if (e.code().equals(Code.NONODE)) {
-				return false;
-			}
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
+		} else {
+			return false;
 		}
 	}
 
@@ -276,11 +239,14 @@ public class NimbusMaster implements ISafetyNetListener {
 		info.setAvailabilityArray(array.getBytes());
 
 		try {
-			Nimbus.getZooKeeper().create(Nimbus.ROOT_ZNODE + "/" + name,
-					info.getByteRepresentation(), Ids.OPEN_ACL_UNSAFE,
-					CreateMode.PERSISTENT);
+
+			Nimbus.getZooKeeper().makePaths(name);
+			Nimbus.getZooKeeper().setDataVariable(name,
+					info.getByteRepresentation());
+
 			LOG.info("Creating Cache ZNode at " + Nimbus.CACHE_ZNODE
-					+ " with data of size " + info.getByteRepresentation().length);
+					+ " with data of size "
+					+ info.getByteRepresentation().length);
 		} catch (Exception e) {
 			throw new FailedToCreateCacheException(e.getMessage());
 		}
@@ -464,19 +430,7 @@ public class NimbusMaster implements ISafetyNetListener {
 	 *             If a ZooKeeper related error occurs.
 	 */
 	private List<String> getCacheletNames(String cacheName) {
-		try {
-			return Nimbus.getZooKeeper().getChildren(
-					Nimbus.ROOT_ZNODE + "/" + cacheName, false);
-		} catch (KeeperException e) {
-			if (e.code().equals(Code.NONODE)) {
-				return null;
-			}
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
-		}
+		return Nimbus.getZooKeeper().getChildren(cacheName);
 	}
 
 	/**
@@ -508,18 +462,11 @@ public class NimbusMaster implements ISafetyNetListener {
 	 * @return Whether or not this Cachelet has gotten the lock.
 	 */
 	private boolean getRestartLock(String lockname) {
-		try {
-			if (Nimbus.getZooKeeper().exists(lockname, false) == null) {
-				Nimbus.getZooKeeper().create(lockname, "".getBytes(),
-						Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-				return true;
-			}
-			return false;
-		} catch (KeeperException e) {
-			return false;
-		} catch (InterruptedException e) {
-			return false;
+		if (!Nimbus.getZooKeeper().exists(lockname)) {
+			Nimbus.getZooKeeper().makePaths(lockname, CreateMode.EPHEMERAL);
+			return true;
 		}
+		return false;
 	}
 
 	/**
@@ -529,14 +476,8 @@ public class NimbusMaster implements ISafetyNetListener {
 	 *            The lock to release.
 	 */
 	private void releaseRestartLock(String lockname) {
-		try {
-			if (Nimbus.getZooKeeper().exists(lockname, false) != null) {
-				Nimbus.getZooKeeper().delete(lockname, -1);
-			}
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} catch (KeeperException e) {
-			e.printStackTrace();
+		if (Nimbus.getZooKeeper().exists(lockname)) {
+			Nimbus.getZooKeeper().deletePaths(lockname, false);
 		}
 	}
 

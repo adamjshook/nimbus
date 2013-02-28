@@ -81,19 +81,19 @@
   <!-- The nimbus.safety.net.timeout property is used by the Safety Net to notify any listeners that a -->
   <!-- Cachelet has not responded in the configured amount of time in milliseconds.-->
   <!-- Note that nimbus.safety.net.enabled must be set to true for this value to mean anything. -->
-  <!-- Default value is 5000 milliseconds -->
+  <!-- Default value is 15000 milliseconds -->
   <property>
     <name>nimbus.safety.net.timeout</name>
-    <value>5000</value>
+    <value>60000</value>
   </property>
 
   <!-- The nimbus.safety.net.heartbeat property is used by Cachelets to send heartbeats to ZooKeeper. -->
   <!-- Note that nimbus.safety.net.enabled must be set to true for this value to mean anything. -->
   <!-- Value is in milliseconds. -->
-  <!-- Default value is 1000 millisecond -->
+  <!-- Default value is 5000 millisecond -->
   <property>
     <name>nimbus.cachelet.heartbeat</name>
-    <value>1000</value>
+    <value>2000</value>
   </property>
 
   <!-- The nimbus.server.hash property is used to choose the hashing algorithm for each Cache. -->
@@ -105,5 +105,15 @@
   <property>
     <name>nimbus.server.hash</name>
     <value>HASHCODE</value>
+  </property>
+
+  <property>
+    <name>zk.session.timeout</name>
+    <value>30000</value>
+  </property>
+
+  <property>
+    <name>zk.assistant.root.path</name>
+    <value>/nimbus/</value>
   </property>
 </configuration>

@@ -20,11 +20,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.ZooDefs.Ids;
 
 import nimbus.client.BaseNimbusClient;
 import nimbus.client.MasterClient;
@@ -36,6 +31,8 @@ import nimbus.server.CacheType;
 import nimbus.server.SetCacheletServer;
 import nimbus.server.MasterCacheletServer;
 import nimbus.utils.BigBitArray;
+import nimbus.utils.NimbusException;
+import nimbus.zk.ZooKeeperAssistant;
 
 /**
  * This is the main class for starting up a Cache. It parses command line
@@ -57,7 +54,7 @@ public class Nimbus extends Configured implements Tool {
 	private static CacheInfo info = null;
 	private static Random rndm = new Random();
 	private static final byte[] EMPTY_DATA = "".getBytes();
-	private static ZooKeeper s_zk = null;
+	private static ZooKeeperAssistant s_zk = null;
 
 	private static String cacheName;
 	private static int port;
@@ -72,6 +69,7 @@ public class Nimbus extends Configured implements Tool {
 
 	@Override
 	public int run(String[] args) throws Exception {
+
 		parseOptions(args);
 
 		if (line.hasOption("start")) {
@@ -95,6 +93,7 @@ public class Nimbus extends Configured implements Tool {
 
 		LOG.info("Starting Nimbus cache");
 		Nimbus.getZooKeeper();
+		LOG.info("ZooKeeper finished");
 
 		// Set the Cache ZNode to the root + the Cache name
 		CACHE_ZNODE = ROOT_ZNODE + "/" + cacheName;
@@ -104,44 +103,13 @@ public class Nimbus extends Configured implements Tool {
 
 		// add shutdown hook
 		NimbusShutdownHook.createInstance(type);
+		LOG.info("making root node");
+		// ensure this root path exists
+		getZooKeeper().makePaths(ROOT_ZNODE);
 
-		// check if the root node exists, if it doesn't create it
-		if (getZooKeeper().exists(ROOT_ZNODE, false) == null) {
-			LOG.info("Creating root Znode");
-			getZooKeeper().create(ROOT_ZNODE, EMPTY_DATA, Ids.OPEN_ACL_UNSAFE,
-					CreateMode.PERSISTENT);
-		}
-
-		// Fire up the safety net if enabled
+		LOG.info("done making root node");
 		if (type.equals(CacheType.MASTER)) {
-			// check if the Cache node exists, if it doesn't create it
-			NimbusMaster.getInstance().getCacheInfoLock(cacheName);
-			info = NimbusMaster.getInstance().getCacheInfo(cacheName);
-			if (info == null) {
-				LOG.info("CacheInfo is null.  Creating CacheZNode...");
-				info = new CacheInfo();
-				info.setName(cacheName);
-				info.setType(type);
-				info.setPort(port);
-				BigBitArray array = new BigBitArray(
-						BigBitArray.makeMultipleOfEight(NimbusConf.getConf()
-								.getNumNimbusCachelets()));
-				info.setAvailabilityArray(array.getBytes());
-
-				getZooKeeper().create(CACHE_ZNODE,
-						info.getByteRepresentation(), Ids.OPEN_ACL_UNSAFE,
-						CreateMode.PERSISTENT);
-				LOG.info("Creating Cache ZNode at " + CACHE_ZNODE
-						+ " with data of size "
-						+ info.getByteRepresentation().length);
-			}
-			NimbusMaster.getInstance().releaseCacheInfoLock(cacheName);
-
-			if (NimbusConf.getConf().isSafetyNetEnabled()) {
-				// Fire up the Safety Net
-				Thread safetynet = new Thread(NimbusSafetyNet.getInstance());
-				safetynet.start();
-			}
+			createMasterCacheInfo();
 		} else {
 			// this info is for a non-master cache
 			info = NimbusMaster.getInstance().getCacheInfo(cacheName);
@@ -166,15 +134,8 @@ public class Nimbus extends Configured implements Tool {
 		t.start();
 
 		// add myself to ZooKeeper
-		if (getZooKeeper().exists(CACHELET_ZNODE, false) != null) {
-			LOG.info("My ZNode exists for some reason... Deleting old ZNode.");
-			getZooKeeper().delete(CACHELET_ZNODE, -1);
-		}
-
-		// Create my ZNode
 		LOG.info("Creating my ZNode at " + CACHELET_ZNODE);
-		getZooKeeper().create(CACHELET_ZNODE, EMPTY_DATA, Ids.OPEN_ACL_UNSAFE,
-				CreateMode.EPHEMERAL);
+		getZooKeeper().makePaths(CACHELET_ZNODE);
 
 		// this while loop manages connections to other Cachelets
 		// if a Cachelet connects, then create a new thread to handle
@@ -182,16 +143,48 @@ public class Nimbus extends Configured implements Tool {
 
 		LOG.info("Starting heartbeat cycle...");
 		long hbInterval = NimbusConf.getConf().getCacheletHeartbeatInterval();
-		getZooKeeper().setData(CACHELET_ZNODE, EMPTY_DATA, -1);
-		long lastheartbeat = System.currentTimeMillis(), now;
+		getZooKeeper().setDataVariable(CACHELET_ZNODE, EMPTY_DATA);
 		while (!false) {
+			Thread.sleep(hbInterval);
+			getZooKeeper().setDataVariable(CACHELET_ZNODE, EMPTY_DATA);
+		}
+	}
 
-			// heartbeat for Cachelet
-			now = System.currentTimeMillis();
-			if (now - lastheartbeat >= hbInterval) {
-				getZooKeeper().setData(CACHELET_ZNODE, EMPTY_DATA, -1);
-				lastheartbeat = now;
-			}
+	private void createMasterCacheInfo() {
+
+		LOG.info("creating master cache info");
+		// check if the Cache node exists, if it doesn't create it
+		NimbusMaster.getInstance().getCacheInfoLock(cacheName);
+		info = NimbusMaster.getInstance().getCacheInfo(cacheName);
+		if (info == null) {
+			LOG.info("CacheInfo is null.  Creating CacheZNode...");
+			info = new CacheInfo();
+			info.setName(cacheName);
+			info.setType(type);
+			info.setPort(port);
+
+			BigBitArray array = new BigBitArray(
+					BigBitArray.makeMultipleOfEight(NimbusConf.getConf()
+							.getNumNimbusCachelets()));
+			info.setAvailabilityArray(array.getBytes());
+
+			getZooKeeper().makePaths(CACHE_ZNODE);
+			getZooKeeper().setDataVariable(CACHE_ZNODE,
+					info.getByteRepresentation());
+
+			LOG.info("Creating Cache ZNode at " + CACHE_ZNODE
+					+ " with data of size "
+					+ info.getByteRepresentation().length);
+		} else {
+			LOG.info("CacheInfo is not null");
+		}
+
+		NimbusMaster.getInstance().releaseCacheInfoLock(cacheName);
+
+		if (NimbusConf.getConf().isSafetyNetEnabled()) {
+			// Fire up the Safety Net
+			Thread safetynet = new Thread(NimbusSafetyNet.getInstance());
+			safetynet.start();
 		}
 	}
 
@@ -211,20 +204,15 @@ public class Nimbus extends Configured implements Tool {
 	 * 
 	 * @return The ZooKeeper instance.
 	 */
-	public static ZooKeeper getZooKeeper() {
+	public static ZooKeeperAssistant getZooKeeper() {
 		if (s_zk == null) {
 			// Create ZK Instance
 			try {
 				LOG.info("Connecting to ZooKeeper at "
 						+ NimbusConf.getConf().getZooKeeperServers());
-				s_zk = new ZooKeeper(
-						NimbusConf.getConf().getZooKeeperServers(),
-						Integer.MAX_VALUE, new Watcher() {
-							@Override
-							public void process(WatchedEvent event) {
-							}
-						});
-			} catch (IOException e) {
+				s_zk = new ZooKeeperAssistant();
+
+			} catch (NimbusException e) {
 				e.printStackTrace();
 				LOG.error("Failed to initialize ZooKeeper");
 				System.exit(-1);

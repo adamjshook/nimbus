@@ -10,8 +10,6 @@ import nimbus.main.NimbusConf;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Stat;
 
 import nimbus.server.TripleSetCacheletWorker;
 import nimbus.utils.BigBitArray;
@@ -38,7 +36,6 @@ public class NimbusTripleSetClient {
 	private ICacheletHash cacheletHash = ICacheletHash.getInstance();
 	private BigBitArray availabilityArray = null;
 	private DataZNodeWatcher watcher = new DataZNodeWatcher();
-	private Stat stat = new Stat();
 	private int contains_numdown = 0;
 	private String cacheName = null;
 	private int replication;
@@ -65,17 +62,9 @@ public class NimbusTripleSetClient {
 
 		numServers = cachelets.length;
 
-		try {
-			CacheInfo info = new CacheInfo(Nimbus.getZooKeeper().getData(
-					Nimbus.ROOT_ZNODE + "/" + cacheName, watcher, stat));
-			availabilityArray = new BigBitArray(info.getAvailabilityArray());
-		} catch (KeeperException e) {
-			e.printStackTrace();
-			throw new RuntimeException("ZooKeeper error.");
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			throw new RuntimeException("ZooKeeper error.");
-		}
+		CacheInfo info = new CacheInfo(Nimbus.getZooKeeper().getDataVariable(
+				cacheName, watcher, null));
+		availabilityArray = new BigBitArray(info.getAvailabilityArray());
 	}
 
 	/**
@@ -106,8 +95,8 @@ public class NimbusTripleSetClient {
 			if (watcher.isTriggered()) {
 				try {
 					watcher.reset();
-					info = new CacheInfo(Nimbus.getZooKeeper().getData(
-							Nimbus.ROOT_ZNODE + "/" + cacheName, watcher, stat));
+					info = new CacheInfo(Nimbus.getZooKeeper().getDataVariable(
+							cacheName, watcher, null));
 					availabilityArray = new BigBitArray(
 							info.getAvailabilityArray());
 
@@ -192,7 +181,7 @@ public class NimbusTripleSetClient {
 
 		return false;
 	}
-	
+
 	public Iterator<Triple> iterator() throws IOException {
 		StreamingTripleSetIterator iter = new StreamingTripleSetIterator();
 		for (int i = 0; i < numServers; ++i) {
@@ -203,7 +192,7 @@ public class NimbusTripleSetClient {
 		iter.initialize();
 		return iter;
 	}
-	
+
 	public Iterator<Triple> iterator(String s1) throws IOException {
 		StreamingTripleSetIterator iter = new StreamingTripleSetIterator();
 		for (int i = 0; i < numServers; ++i) {
@@ -339,8 +328,9 @@ public class NimbusTripleSetClient {
 		if (watcher.isTriggered()) {
 			try {
 				watcher.reset();
-				CacheInfo info = new CacheInfo(Nimbus.getZooKeeper().getData(
-						Nimbus.ROOT_ZNODE + "/" + cacheName, watcher, stat));
+
+				CacheInfo info = new CacheInfo(Nimbus.getZooKeeper()
+						.getDataVariable(cacheName, watcher, null));
 				availabilityArray = new BigBitArray(info.getAvailabilityArray());
 
 				for (int i = 0; i < list.values().size(); ++i) {
@@ -363,9 +353,11 @@ public class NimbusTripleSetClient {
 	 */
 	private class TripleSetCacheletConnection extends BaseNimbusClient {
 
-		/*private final Logger LOG = Logger
-				.getLogger(TripleSetCacheletConnection.class);
-		private String cacheletName;*/
+		/*
+		 * private final Logger LOG = Logger
+		 * .getLogger(TripleSetCacheletConnection.class); private String
+		 * cacheletName;
+		 */
 
 		/**
 		 * Connects to the given host. Automatically gets the port from the
@@ -385,7 +377,7 @@ public class NimbusTripleSetClient {
 			super(cacheletName, NimbusMaster.getInstance().getCachePort(
 					cacheName));
 			super.cacheName = cacheName;
-			//this.cacheletName = cacheletName;
+			// this.cacheletName = cacheletName;
 			connect();
 		}
 
@@ -412,7 +404,7 @@ public class NimbusTripleSetClient {
 		public void getAll() throws IOException {
 			writeLine(Integer.toString(TripleSetCacheletWorker.GET_ALL));
 		}
-		
+
 		public void get(String s1) throws IOException {
 			writeLine(TripleSetCacheletWorker.GET_WITH_ONE + " " + s1);
 		}
