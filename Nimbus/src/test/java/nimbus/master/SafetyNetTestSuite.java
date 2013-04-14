@@ -30,7 +30,7 @@ public class SafetyNetTestSuite implements ISafetyNetListener {
 
 		Thread.sleep(1000);
 
-		Nimbus.getZooKeeper().makePaths(Nimbus.ROOT_ZNODE);
+		Nimbus.getZooKeeper().ensurePaths(Nimbus.ROOT_ZNODE);
 
 		Thread t = new Thread(NimbusSafetyNet.getInstance());
 		t.start();

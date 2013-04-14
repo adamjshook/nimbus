@@ -25,10 +25,6 @@ public class NimbusShutdownHook extends Thread {
 	private boolean clean = false;
 	private CacheType type = null;
 
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
-
 	public static void createInstance(CacheType type) {
 		if (s_instance == null) {
 			s_instance = new NimbusShutdownHook(type);

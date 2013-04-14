@@ -3,7 +3,7 @@
 if [ $# != 1 ]
 then
 	echo "Usage: $0 <cachename>"
-	exit -1
+	exit 1
 fi
 
 bin=`dirname "$0"`

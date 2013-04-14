@@ -9,7 +9,6 @@ import java.io.InputStreamReader;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import nimbus.utils.CacheletHashType;
@@ -32,7 +31,6 @@ public class NimbusConf extends Configuration {
 	public static final String NIMBUS_PORTS_VAR = "nimbus.ports";
 	public static final String NIMBUS_SERVER_CONF_VAR = "nimbus.servers";
 	public static final String JAVA_HOME_CONF_VAR = "java.home";
-	public static final String LOG4J_LEVEL_CONF_VAR = "log4j.level";
 	public static final String ZK_SERVERS_CONF_VAR = "zookeeper.quorum.servers";
 	public static final String NIMBUS_NUM_SERVERS_CONF_VAR = "nimbus.num.servers";
 	public static final String NIMBUS_JAVA_OPTS = "nimbus.java.opts";
@@ -53,9 +51,6 @@ public class NimbusConf extends Configuration {
 			if (s_instance == null) {
 				LOG.info("Instance is null.  Loading configuration");
 				loadConfiguration();
-
-				LOG.setLevel(Level.toLevel(s_instance.get(
-						NimbusConf.LOG4J_LEVEL_CONF_VAR, "INFO")));
 
 				if (s_instance.isSafetyNetEnabled()
 						&& s_instance.getCacheletHeartbeatInterval() >= s_instance
@@ -100,10 +95,6 @@ public class NimbusConf extends Configuration {
 		return home;
 	}
 
-	public Level getLog4JLevel() {
-		return Level.toLevel(s_instance.get(LOG4J_LEVEL_CONF_VAR));
-	}
-
 	public int getNumNimbusCachelets() {
 		return Integer.parseInt(s_instance.get(NIMBUS_NUM_SERVERS_CONF_VAR));
 	}
@@ -143,7 +134,12 @@ public class NimbusConf extends Configuration {
 				throw new RuntimeException(
 						"NIMBUS_HOME environment variable not set");
 			}
-
+			
+			if (System.getenv("HADOOP_HOME") == null) {
+				throw new RuntimeException(
+						"HADOOP_HOME environment variable not set");
+			}
+			
 			LOG.info("Creating base configuration");
 			s_instance = new NimbusConf();
 

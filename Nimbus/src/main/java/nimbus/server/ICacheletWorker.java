@@ -1,8 +1,11 @@
 package nimbus.server;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.Socket;
 import java.net.SocketException;
 
@@ -17,8 +20,8 @@ import org.apache.log4j.Logger;
 public abstract class ICacheletWorker implements Runnable {
 
 	private final Logger LOG = Logger.getLogger(ICacheletWorker.class);
-	protected OutputStreamWriter out = null;
-	protected InputStreamReader in = null;
+	protected Writer out = null;
+	protected BufferedReader in = null;
 
 	/**
 	 * Creates an {@link IProtocol} object based on the given {@link CacheType}
@@ -34,9 +37,9 @@ public abstract class ICacheletWorker implements Runnable {
 	 */
 	public void initialize(String cacheName, String cacheletName,
 			CacheType type, Socket socket) throws IOException {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-		out = new OutputStreamWriter(socket.getOutputStream());
-		in = new InputStreamReader(socket.getInputStream());
+		out = new BufferedWriter(new OutputStreamWriter(
+				socket.getOutputStream()));
+		in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	}
 
 	/**
@@ -94,12 +97,12 @@ public abstract class ICacheletWorker implements Runnable {
 	 * @throws IOException
 	 */
 	protected String readLine() throws IOException {
-		StringBuilder builder = new StringBuilder();
-		int c;
-		while ((c = in.read()) != '\n' && c != -1) {
-			builder.append((char) c);
-		}
-
-		return builder.toString().length() == 0 ? null : builder.toString();
+		return in.readLine();
+		/*
+		 * StringBuilder builder = new StringBuilder(); int c; while ((c =
+		 * in.read()) != '\n' && c != -1) { builder.append((char) c); }
+		 * 
+		 * return builder.toString().length() == 0 ? null : builder.toString();
+		 */
 	}
 }

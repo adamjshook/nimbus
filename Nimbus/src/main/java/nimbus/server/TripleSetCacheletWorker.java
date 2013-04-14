@@ -3,7 +3,6 @@ package nimbus.server;
 import java.io.IOException;
 import java.util.Iterator;
 
-import nimbus.main.NimbusConf;
 import nimbus.nativestructs.Triple;
 
 import org.apache.hadoop.fs.Path;
@@ -46,10 +45,6 @@ public class TripleSetCacheletWorker extends ICacheletWorker {
 
 	private TripleSetCacheletServer server = null;
 	private static final String HELP_MESSAGE = "Invalid input.";
-
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
 
 	public TripleSetCacheletWorker(TripleSetCacheletServer server) {
 		this.server = server;

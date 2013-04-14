@@ -4,8 +4,6 @@ import java.io.IOException;
 import nimbus.main.Nimbus;
 import nimbus.main.NimbusConf;
 
-import org.apache.log4j.Logger;
-
 import nimbus.master.CacheExistsException;
 import nimbus.master.NimbusMaster;
 import nimbus.master.FailedToCreateCacheException;
@@ -21,11 +19,6 @@ import nimbus.server.MasterCacheletWorker;
  * {@link NimbusMaster}.
  */
 public class MasterClient extends BaseNimbusClient {
-
-	private static final Logger LOG = Logger.getLogger(MasterClient.class);
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
 
 	public MasterClient() throws IOException {
 		super(Nimbus.getRandomNimbusHost(), Integer.parseInt(NimbusConf

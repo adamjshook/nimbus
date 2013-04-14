@@ -24,9 +24,6 @@ public class NimbusTripleSetClient {
 
 	private static final Logger LOG = Logger
 			.getLogger(NimbusTripleSetClient.class);
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
 
 	private HashMap<Integer, TripleSetCacheletConnection> list = new HashMap<Integer, TripleSetCacheletConnection>();
 	private int numServers = -1;

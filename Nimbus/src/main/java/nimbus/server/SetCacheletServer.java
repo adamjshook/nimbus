@@ -3,6 +3,7 @@ package nimbus.server;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Iterator;
 
 import nimbus.main.Nimbus;
 import nimbus.main.NimbusConf;
@@ -20,15 +21,12 @@ import nimbus.nativestructs.CSet;
 import nimbus.utils.BloomFilter;
 import nimbus.utils.ICacheletHash;
 
-public class SetCacheletServer extends ICacheletServer {
+public class SetCacheletServer extends ICacheletServer implements
+		Iterable<String> {
 
-	private CSet set = CSet.getInstance();
+	private CSet set = new CSet();
 	private static BloomFilter bfilter = null;
 	private static final Logger LOG = Logger.getLogger(SetCacheletServer.class);
-
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
 
 	public static Path getBloomFilterPath(String cacheName, String cacheletName) {
 		return new Path(Nimbus.ROOT_ZNODE + "/" + cacheName + "/"
@@ -196,4 +194,12 @@ public class SetCacheletServer extends ICacheletServer {
 		}
 	}
 
+	@Override
+	public Iterator<String> iterator() {
+		return set.iterator();
+	}
+
+	public int size() {
+		return set.size();
+	}
 }

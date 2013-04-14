@@ -20,5 +20,7 @@ public enum CacheType {
 	 * The triple store is a Cache that distributes a large data set of Triples
 	 * over all Cachelets in the Cache
 	 */
-	TRIPLE_STORE
+	TRIPLE_STORE,
+	
+	MAPSET
 }

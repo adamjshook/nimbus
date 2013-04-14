@@ -85,5 +85,10 @@
             <artifactId>nimbus-core</artifactId>
             <version>0.0.1</version>
         </dependency>
+        <dependency>
+        	<groupId>org.apache.hbase</groupId>
+        	<artifactId>hbase</artifactId>
+        	<version>0.94.5</version>
+        </dependency>
     </dependencies>
 </project>

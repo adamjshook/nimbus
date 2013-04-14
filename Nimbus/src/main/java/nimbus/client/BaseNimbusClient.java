@@ -27,7 +27,6 @@ public class BaseNimbusClient implements Runnable {
 	protected DataZNodeWatcher watcher = new DataZNodeWatcher();
 
 	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
 		try {
 			fs = FileSystem.get(NimbusConf.getConf());
 		} catch (IOException e) {

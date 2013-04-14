@@ -5,7 +5,6 @@ import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 
-import nimbus.main.NimbusConf;
 import nimbus.nativestructs.CSet;
 
 import org.apache.log4j.Logger;
@@ -25,9 +24,6 @@ import org.apache.log4j.Logger;
 public abstract class ICacheletServer implements Runnable {
 
 	private static final Logger LOG = Logger.getLogger(ICacheletServer.class);
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
 
 	protected List<ICacheletWorker> workers = new ArrayList<ICacheletWorker>();
 

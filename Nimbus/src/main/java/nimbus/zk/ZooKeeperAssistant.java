@@ -134,38 +134,76 @@ public class ZooKeeperAssistant implements ConnectListener {
 		return retpath;
 	}
 
-	public void makePaths(String path) {
-		makePaths(path, true);
+	/**
+	 * Gets an ephemeral lock on the given path.
+	 * 
+	 * Returns true if the path creation was successful, false if the path
+	 * already exists. Throws ZKAssistantException If a parent node does not
+	 * exist
+	 * 
+	 * @param path
+	 *            The path to get a lock on
+	 * @param mode
+	 *            The mode to create the lock for
+	 * @return True if the lock is achieved, false is somebody else has it
+	 */
+	public boolean lockPath(String path) {
+		try {
+			keeper.create(path, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE,
+					CreateMode.EPHEMERAL);
+			LOG.info("Created " + path);
+			return true;
+		} catch (KeeperException e) {
+			if (e.code().equals(Code.NODEEXISTS)) {
+				return false;
+			} else if (e.code().equals(Code.NONODE)) {
+				throw new ZKAssistantException(
+						"A parent node does not exist for " + path);
+			} else {
+				LOG.error(e);
+				if (reconnect(e)) {
+					return lockPath(path);
+				} else {
+					throw new ZKAssistantException(
+							"Unable to reconnect or unsupported error code");
+				}
+			}
+		} catch (InterruptedException e) {
+			return lockPath(path);
+		}
 	}
 
-	public void makePaths(String path, CreateMode mode) {
-		makePaths(path, true, mode);
+	public void ensurePaths(String path) {
+		ensurePaths(path, true);
 	}
 
-	public void makePaths(String path, boolean recursive) {
+	public void ensurePaths(String path, CreateMode mode) {
+		ensurePaths(path, true, mode);
+	}
+
+	public void ensurePaths(String path, boolean recursive) {
 		String absPath = makeAbsolutePath(path);
 		if (absPath != null) {
 			if (recursive) {
-				makeRecursivePaths(absPath, CreateMode.PERSISTENT);
+				ensureRecursivePaths(absPath, CreateMode.PERSISTENT);
 			} else {
-				makeNonRecursivePath(absPath, CreateMode.PERSISTENT);
+				ensureNonRecursivePath(absPath, CreateMode.PERSISTENT);
 			}
 		}
 	}
 
-	public void makePaths(String path, boolean recursive, CreateMode mode) {
+	public void ensurePaths(String path, boolean recursive, CreateMode mode) {
 		String absPath = makeAbsolutePath(path);
 		if (absPath != null) {
 			if (recursive) {
-				makeRecursivePaths(absPath, mode);
+				ensureRecursivePaths(absPath, mode);
 			} else {
-				makeNonRecursivePath(absPath, mode);
+				ensureNonRecursivePath(absPath, mode);
 			}
 		}
 	}
 
-	private void makeNonRecursivePath(String absPath, CreateMode mode) {
-
+	private void ensureNonRecursivePath(String absPath, CreateMode mode) {
 		try {
 			keeper.create(absPath, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, mode);
 			LOG.info("Created " + absPath);
@@ -203,7 +241,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 		}
 	}
 
-	private void makeRecursivePaths(String absPath, CreateMode mode) {
+	private void ensureRecursivePaths(String absPath, CreateMode mode) {
 		String[] paths = absPath.split("/");
 		String fullZNode = "";
 		for (int i = 1; i < paths.length; ++i) {
@@ -222,7 +260,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 					LOG.error(e);
 					if (reconnect(e)) {
 						// try again
-						makeRecursivePaths(absPath, mode);
+						ensureRecursivePaths(absPath, mode);
 					} else {
 						LOG.error(e);
 						throw new ZKAssistantException(
@@ -231,7 +269,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 				}
 			} catch (InterruptedException e) {
 				LOG.error(e);
-				makeRecursivePaths(absPath, mode);
+				ensureRecursivePaths(absPath, mode);
 			}
 		}
 	}

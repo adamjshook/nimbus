@@ -34,9 +34,6 @@ import nimbus.utils.ChildZNodeWatcher;
 public class NimbusSafetyNet implements Runnable {
 
 	private static final Logger LOG = Logger.getLogger(NimbusSafetyNet.class);
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
 
 	private HashMap<String, CacheZNode> cacheMap = new HashMap<String, CacheZNode>();
 	private ChildZNodeWatcher rootWatcher = new ChildZNodeWatcher();
@@ -81,8 +78,9 @@ public class NimbusSafetyNet implements Runnable {
 		}
 
 		while (!stopped) {
-			try {
+			try {				
 				update();
+				Thread.sleep(NimbusConf.getConf().getCacheletHeartbeatInterval());
 			} catch (KeeperException e) {
 				e.printStackTrace();
 				LOG.error(e.getMessage());

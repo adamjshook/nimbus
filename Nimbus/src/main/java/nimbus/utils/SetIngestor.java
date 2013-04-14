@@ -25,9 +25,6 @@ import nimbus.server.CacheType;
 public class SetIngestor {
 
 	private static final Logger LOG = Logger.getLogger(SetIngestor.class);
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
 
 	public static void main(String args[]) throws NumberFormatException,
 			CacheExistsException, CacheDoesNotExistException, IOException {

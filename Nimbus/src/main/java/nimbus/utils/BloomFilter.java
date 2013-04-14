@@ -42,10 +42,6 @@ public class BloomFilter {
 	private static final int NUM_HASHES = 11;
 	private static HashFunctionLibrary LIBRARY = null;
 
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
-
 	private long arrayLength = -1;
 	private long trueSize = -1;
 	private byte[] bytes = null;

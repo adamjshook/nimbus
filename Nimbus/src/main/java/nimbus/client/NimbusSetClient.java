@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map.Entry;
 
 import nimbus.main.Nimbus;
@@ -22,14 +23,11 @@ import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
 import nimbus.utils.ICacheletHash;
 
-public class NimbusSetClient {
+public class NimbusSetClient implements Iterable<String> {
 
 	private static final Logger LOG = Logger.getLogger(NimbusSetClient.class);
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
 
-	private HashMap<Integer, DSetCacheletConnection> list = new HashMap<Integer, DSetCacheletConnection>();
+	private HashMap<Integer, NimbusSetCacheletConnection> list = new HashMap<Integer, NimbusSetCacheletConnection>();
 	private HashMap<Integer, BloomFilter> filters = new HashMap<Integer, BloomFilter>();
 	private int numServers = -1;
 
@@ -40,7 +38,7 @@ public class NimbusSetClient {
 	private int contains_numdown = 0;
 	private String cacheName = null;
 	private int replication;
-	private DSetCacheletConnection contains_connect_tmp;
+	private NimbusSetCacheletConnection contains_connect_tmp;
 
 	/**
 	 * Initializes a connection to a Nimbus distributed set. Downloads the Bloom
@@ -80,7 +78,8 @@ public class NimbusSetClient {
 		String[] cachelets = NimbusConf.getConf().getNimbusCacheletAddresses()
 				.split(",");
 		for (int i = 0; i < cachelets.length; ++i) {
-			list.put(i, new DSetCacheletConnection(cacheName, cachelets[i]));
+			list.put(i,
+					new NimbusSetCacheletConnection(cacheName, cachelets[i]));
 		}
 
 		numServers = cachelets.length;
@@ -128,11 +127,6 @@ public class NimbusSetClient {
 		info.setFalsePosRate(falsePosRate);
 		NimbusMaster.getInstance().setCacheInfo(cacheName, info);
 		NimbusMaster.getInstance().releaseCacheInfoLock(cacheName);
-
-		/*
-		 * for (int i = 0; i < list.size(); ++i) { list.get(i).read(p,
-		 * approxNumRecords, falsePosRate, i); }
-		 */
 
 		do {
 			if (watcher.isTriggered()) {
@@ -285,7 +279,7 @@ public class NimbusSetClient {
 	 * @throws IOException
 	 */
 	public boolean isEmpty() throws IOException {
-		for (DSetCacheletConnection set : list.values()) {
+		for (NimbusSetCacheletConnection set : list.values()) {
 			if (!set.isEmpty()) {
 				return false;
 			}
@@ -294,11 +288,15 @@ public class NimbusSetClient {
 		return true;
 	}
 
+	public Iterator<String> iterator() {
+		return new NimbusSetIterator();
+	}
+
 	/**
 	 * Disconnects this set from all Cachelets.
 	 */
 	public void disconnect() {
-		for (DSetCacheletConnection worker : list.values()) {
+		for (NimbusSetCacheletConnection worker : list.values()) {
 			worker.disconnect();
 		}
 	}
@@ -313,7 +311,8 @@ public class NimbusSetClient {
 		try {
 			filters.clear();
 			long start = System.currentTimeMillis();
-			for (Entry<Integer, DSetCacheletConnection> e : list.entrySet()) {
+			for (Entry<Integer, NimbusSetCacheletConnection> e : list
+					.entrySet()) {
 				filters.put(e.getKey(), e.getValue().getBloomFilter());
 			}
 			LOG.info("Done downloading Bloom filters... Took "
@@ -324,14 +323,52 @@ public class NimbusSetClient {
 		}
 	}
 
+	private class NimbusSetIterator implements Iterator<String> {
+
+		private Iterator<NimbusSetCacheletConnection> cacheletsIter = null;
+		private Iterator<String> iter = null;
+
+		public NimbusSetIterator() {
+			cacheletsIter = list.values().iterator();
+			if (cacheletsIter.hasNext()) {
+				iter = cacheletsIter.next().iterator();
+			}
+		}
+
+		@Override
+		public boolean hasNext() {
+			return cacheletsIter.hasNext() || iter.hasNext();
+		}
+
+		@Override
+		public String next() {
+			do {
+				if (iter.hasNext()) {
+					return iter.next();
+				} else if (cacheletsIter.hasNext()) {
+					iter = cacheletsIter.next().iterator();
+				} else {
+					break;
+				}
+			} while (true);
+
+			return null;
+		}
+
+		@Override
+		public void remove() {
+			throw new RuntimeException(
+					"NimbusSetCacheletIterator::remove is unsupported");
+		}
+	}
+
 	/**
 	 * Helper class to handle connections to each Cachelet. Used by the
-	 * DSetClient to... well... connect to each Cachelet.
+	 * {@link NimbusSetClient} to... well... connect to each Cachelet.
 	 */
-	private class DSetCacheletConnection extends BaseNimbusClient {
+	private class NimbusSetCacheletConnection extends BaseNimbusClient
+			implements Iterable<String> {
 
-		private final Logger LOG = Logger
-				.getLogger(DSetCacheletConnection.class);
 		private String cacheletName;
 
 		/**
@@ -347,7 +384,7 @@ public class NimbusSetClient {
 		 * @throws IOException
 		 *             If some bad juju happens.
 		 */
-		public DSetCacheletConnection(String cacheName, String cacheletName)
+		public NimbusSetCacheletConnection(String cacheName, String cacheletName)
 				throws CacheDoesNotExistException, IOException {
 			super(cacheletName, NimbusMaster.getInstance().getCachePort(
 					cacheName));
@@ -355,16 +392,6 @@ public class NimbusSetClient {
 			this.cacheletName = cacheletName;
 			connect();
 		}
-
-		/*
-		 * /** Clears this Cachelet of all elements.
-		 * 
-		 * @throws IOException If an error occurs when sending the request.
-		 * 
-		 * public void clear() throws IOException {
-		 * writeLine(Integer.toString(DSetCacheletWorker.CLEAR));
-		 * dumpResponses(); }
-		 */
 
 		/**
 		 * Sends a request to the Cachelet to determine if the given element is
@@ -412,13 +439,50 @@ public class NimbusSetClient {
 		 *             deserializing the filter.
 		 */
 		public BloomFilter getBloomFilter() throws IOException {
-			BloomFilter bf = new BloomFilter(
-					SetCacheletServer.getBloomFilterPath(cacheName,
-							cacheletName));
-			if (LOG.isDebugEnabled()) {
-				LOG.debug(bf.toString());
+			return new BloomFilter(SetCacheletServer.getBloomFilterPath(
+					cacheName, cacheletName));
+		}
+
+		@Override
+		public Iterator<String> iterator() {
+			return new NimbusSetCacheletIterator();
+		}
+
+		private class NimbusSetCacheletIterator implements Iterator<String> {
+
+			private int numEntries = 0;
+			private int entriesRead = 0;
+
+			public NimbusSetCacheletIterator() {
+				try {
+					writeLine(Integer.toString(SetCacheletWorker.GET));
+					numEntries = Integer.parseInt(readLine());
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
 			}
-			return bf;
+
+			@Override
+			public boolean hasNext() {
+				return entriesRead < numEntries;
+			}
+
+			@Override
+			public String next() {
+				++entriesRead;
+				try {
+					return readLine();
+				} catch (IOException e) {
+					e.printStackTrace();
+					return null;
+				}
+			}
+
+			@Override
+			public void remove() {
+				throw new RuntimeException(
+						"NimbusSetCacheletIterator::remove is unsupported");
+			}
 		}
 	}
 }

@@ -42,10 +42,6 @@ public class NimbusMaster implements ISafetyNetListener {
 	private static final String CACHE_INFO_LOCK = "/nimbus-master-info-lock";
 	private static final String CACHE_RESTART_LOCK = "/nimbus-master-restart-lock-";
 
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
-
 	private NimbusMaster() {
 		// Get the ports Nimbus can use from the configuration
 		String[] strPorts = NimbusConf.getConf().getNimbusCacheletPortRange()
@@ -102,20 +98,20 @@ public class NimbusMaster implements ISafetyNetListener {
 		boolean locked = false;
 		do {
 			LOG.info("Getting lock for " + cacheName);
-			while (Nimbus.getZooKeeper().exists(
+
+			while (!Nimbus.getZooKeeper().lockPath(
 					CACHE_INFO_LOCK + "-" + cacheName)) {
+				LOG.info("Somebody already has it... waiting");
+
 				try {
-					LOG.info("Somebody already has it... waiting");
 					Thread.sleep(50);
 				} catch (InterruptedException e) {
 
 				}
 			}
 
-			Nimbus.getZooKeeper().makePaths(CACHE_INFO_LOCK + "-" + cacheName,
-					CreateMode.EPHEMERAL);
-
 			locked = true;
+
 			LOG.info("Got lock for Cache " + cacheName);
 
 		} while (!locked);
@@ -240,7 +236,7 @@ public class NimbusMaster implements ISafetyNetListener {
 
 		try {
 
-			Nimbus.getZooKeeper().makePaths(name);
+			Nimbus.getZooKeeper().ensurePaths(name);
 			Nimbus.getZooKeeper().setDataVariable(name,
 					info.getByteRepresentation());
 
@@ -463,7 +459,7 @@ public class NimbusMaster implements ISafetyNetListener {
 	 */
 	private boolean getRestartLock(String lockname) {
 		if (!Nimbus.getZooKeeper().exists(lockname)) {
-			Nimbus.getZooKeeper().makePaths(lockname, CreateMode.EPHEMERAL);
+			Nimbus.getZooKeeper().ensurePaths(lockname, CreateMode.EPHEMERAL);
 			return true;
 		}
 		return false;

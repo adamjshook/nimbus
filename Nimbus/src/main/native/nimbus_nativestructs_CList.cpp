@@ -1,7 +1,7 @@
 #include <jni.h>
 #include <stdio.h>
 #include "JNIUtils.h"
-#include "nimbus_utils_CList.h"
+#include "nimbus_nativestructs_CList.h"
 #include <list>
 #include <cstring>
 #include <sstream>

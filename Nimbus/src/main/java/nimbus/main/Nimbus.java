@@ -28,6 +28,7 @@ import nimbus.master.NimbusMaster;
 import nimbus.master.NimbusSafetyNet;
 import nimbus.server.ICacheletServer;
 import nimbus.server.CacheType;
+import nimbus.server.MapSetCacheletServer;
 import nimbus.server.SetCacheletServer;
 import nimbus.server.MasterCacheletServer;
 import nimbus.utils.BigBitArray;
@@ -105,7 +106,7 @@ public class Nimbus extends Configured implements Tool {
 		NimbusShutdownHook.createInstance(type);
 		LOG.info("making root node");
 		// ensure this root path exists
-		getZooKeeper().makePaths(ROOT_ZNODE);
+		getZooKeeper().ensurePaths(ROOT_ZNODE);
 
 		LOG.info("done making root node");
 		if (type.equals(CacheType.MASTER)) {
@@ -128,6 +129,10 @@ public class Nimbus extends Configured implements Tool {
 			cachelet = new MasterCacheletServer(info.getName(), cacheletName,
 					info.getPort(), info.getType());
 			break;
+		case MAPSET:
+			cachelet = new MapSetCacheletServer(info.getName(), cacheletName,
+					info.getPort(), info.getType());
+			break;
 		}
 
 		Thread t = new Thread(cachelet);
@@ -135,12 +140,11 @@ public class Nimbus extends Configured implements Tool {
 
 		// add myself to ZooKeeper
 		LOG.info("Creating my ZNode at " + CACHELET_ZNODE);
-		getZooKeeper().makePaths(CACHELET_ZNODE);
+		getZooKeeper().ensurePaths(CACHELET_ZNODE);
 
 		// this while loop manages connections to other Cachelets
 		// if a Cachelet connects, then create a new thread to handle
 		// communication to that Cachelet and wait for more connections
-
 		LOG.info("Starting heartbeat cycle...");
 		long hbInterval = NimbusConf.getConf().getCacheletHeartbeatInterval();
 		getZooKeeper().setDataVariable(CACHELET_ZNODE, EMPTY_DATA);
@@ -168,7 +172,7 @@ public class Nimbus extends Configured implements Tool {
 							.getNumNimbusCachelets()));
 			info.setAvailabilityArray(array.getBytes());
 
-			getZooKeeper().makePaths(CACHE_ZNODE);
+			getZooKeeper().ensurePaths(CACHE_ZNODE);
 			getZooKeeper().setDataVariable(CACHE_ZNODE,
 					info.getByteRepresentation());
 

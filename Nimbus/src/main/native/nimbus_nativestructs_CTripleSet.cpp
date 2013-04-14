@@ -1,7 +1,7 @@
 #include <jni.h>
 #include <stdio.h>
 #include "JNIUtils.h"
-#include "nimbus_utils_CTripleSet.h"
+#include "nimbus_nativestructs_CTripleSet.h"
 #include <map>
 #include <set>
 #include <cstring>
@@ -41,21 +41,21 @@ int iterType = NO_ITER_TYPE;
 triplesetmap tripleset;
 int num = 0;
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_iterHasNext
  * Signature: ()Z
  */
-JNIEXPORT jboolean JNICALL Java_nimbus_utils_CTripleSet_c_1iterHasNext(JNIEnv *, jobject)
+JNIEXPORT jboolean JNICALL Java_nimbus_nativestructs_CTripleSet_c_1iterHasNext(JNIEnv *, jobject)
 {
    return iterType == NO_ITER_TYPE;
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_iterNext
- * Signature: (Lnimbus/utils/Triple;)V
+ * Signature: (Lnimbus/nativestructs/Triple;)V
  */
-JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1iterNext(JNIEnv *env, jobject, jobject obj)
+JNIEXPORT void JNICALL Java_nimbus_nativestructs_CTripleSet_c_1iterNext(JNIEnv *env, jobject, jobject obj)
 {
     switch (iterType)
     {
@@ -109,19 +109,19 @@ JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1iterNext(JNIEnv *env, job
 
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_iterRemove
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1iterRemove
+JNIEXPORT void JNICALL Java_nimbus_nativestructs_CTripleSet_c_1iterRemove
   (JNIEnv *, jobject);
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_setiter
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1setiter__(JNIEnv *, jobject)
+JNIEXPORT void JNICALL Java_nimbus_nativestructs_CTripleSet_c_1setiter__(JNIEnv *, jobject)
 {
     tSetIter = tripleset.begin();
     tSetIterEnd = tripleset.end();
@@ -129,11 +129,11 @@ JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1setiter__(JNIEnv *, jobje
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_setiter
  * Signature: (Ljava/lang/String;)V
  */
-JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1setiter__Ljava_lang_String_2(JNIEnv *env, jobject obj, jstring s1)
+JNIEXPORT void JNICALL Java_nimbus_nativestructs_CTripleSet_c_1setiter__Ljava_lang_String_2(JNIEnv *env, jobject obj, jstring s1)
 {
     triplesetiter iter = tripleset.find(JNIUtils::strFromJString(env, s1));
     if (iter != tripleset.end())
@@ -149,11 +149,11 @@ JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1setiter__Ljava_lang_Strin
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_setiter
  * Signature: (Ljava/lang/String;Ljava/lang/String;)V
  */
-JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1setiter__Ljava_lang_String_2Ljava_lang_String_2(JNIEnv *env, jobject obj, jstring s1, jstring s2)
+JNIEXPORT void JNICALL Java_nimbus_nativestructs_CTripleSet_c_1setiter__Ljava_lang_String_2Ljava_lang_String_2(JNIEnv *env, jobject obj, jstring s1, jstring s2)
 {
     triplesetiter iter = tripleset.find(JNIUtils::strFromJString(env, s1));
     if (iter != tripleset.end())
@@ -177,21 +177,21 @@ JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1setiter__Ljava_lang_Strin
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_freeiter
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1freeiter(JNIEnv *, jobject)
+JNIEXPORT void JNICALL Java_nimbus_nativestructs_CTripleSet_c_1freeiter(JNIEnv *, jobject)
 {
     iterType = -1;
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_add
  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
  */
-JNIEXPORT jboolean JNICALL Java_nimbus_utils_CTripleSet_c_1add(JNIEnv *env, jobject obj, jstring s1, jstring s2, jstring s3)
+JNIEXPORT jboolean JNICALL Java_nimbus_nativestructs_CTripleSet_c_1add(JNIEnv *env, jobject obj, jstring s1, jstring s2, jstring s3)
 {
     const char* cs1 = JNIUtils::strFromJString(env, s1);
     const char* cs2 = JNIUtils::strFromJString(env, s2);
@@ -235,11 +235,11 @@ JNIEXPORT jboolean JNICALL Java_nimbus_utils_CTripleSet_c_1add(JNIEnv *env, jobj
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_clear
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1clear(JNIEnv *, jobject)
+JNIEXPORT void JNICALL Java_nimbus_nativestructs_CTripleSet_c_1clear(JNIEnv *, jobject)
 {
     triplesetiter mapIter = tripleset.begin();
 	triplesetiter mapEnd = tripleset.end();
@@ -276,11 +276,11 @@ JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1clear(JNIEnv *, jobject)
     num = 0;
 }
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_print
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1print(JNIEnv *, jobject)
+JNIEXPORT void JNICALL Java_nimbus_nativestructs_CTripleSet_c_1print(JNIEnv *, jobject)
 {
     std::cout << "Writing " << num << " elements\n";
     triplesetiter mapIter = tripleset.begin();
@@ -307,11 +307,11 @@ JNIEXPORT void JNICALL Java_nimbus_utils_CTripleSet_c_1print(JNIEnv *, jobject)
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_contains
  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
  */
-JNIEXPORT jboolean JNICALL Java_nimbus_utils_CTripleSet_c_1contains(JNIEnv *env, jobject obj, jstring s1, jstring s2, jstring s3)
+JNIEXPORT jboolean JNICALL Java_nimbus_nativestructs_CTripleSet_c_1contains(JNIEnv *env, jobject obj, jstring s1, jstring s2, jstring s3)
 {
     triplesetiter iter = tripleset.find(JNIUtils::strFromJString(env, s1));
     if (iter != tripleset.end())
@@ -327,22 +327,22 @@ JNIEXPORT jboolean JNICALL Java_nimbus_utils_CTripleSet_c_1contains(JNIEnv *env,
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_isEmpty
  * Signature: ()Z
  */
-JNIEXPORT jboolean JNICALL Java_nimbus_utils_CTripleSet_c_1isEmpty
+JNIEXPORT jboolean JNICALL Java_nimbus_nativestructs_CTripleSet_c_1isEmpty
   (JNIEnv *, jobject)
 {
     return num == 0;
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_remove
  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
  */
-JNIEXPORT jboolean JNICALL Java_nimbus_utils_CTripleSet_c_1remove(JNIEnv *env, jobject obj, jstring s1, jstring s2, jstring s3)
+JNIEXPORT jboolean JNICALL Java_nimbus_nativestructs_CTripleSet_c_1remove(JNIEnv *env, jobject obj, jstring s1, jstring s2, jstring s3)
 {
     const char* cs1 = JNIUtils::strFromJString(env, s1);
 
@@ -370,11 +370,11 @@ JNIEXPORT jboolean JNICALL Java_nimbus_utils_CTripleSet_c_1remove(JNIEnv *env, j
 }
 
 /*
- * Class:     nimbus_utils_CTripleSet
+ * Class:     nimbus_nativestructs_CTripleSet
  * Method:    c_size
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_nimbus_utils_CTripleSet_c_1size
+JNIEXPORT jint JNICALL Java_nimbus_nativestructs_CTripleSet_c_1size
   (JNIEnv *, jobject)
 {
     return num;

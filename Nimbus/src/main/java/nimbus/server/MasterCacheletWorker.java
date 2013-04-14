@@ -2,8 +2,6 @@ package nimbus.server;
 
 import java.io.IOException;
 
-import nimbus.main.NimbusConf;
-
 import org.apache.log4j.Logger;
 
 import nimbus.master.NimbusMaster;
@@ -17,10 +15,6 @@ public class MasterCacheletWorker extends ICacheletWorker {
 
 	private static final String HELP_MESSAGE = "Invalid input";
 
-	public MasterCacheletWorker() {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
-	
 	@Override
 	public void processMessage(String theInput) throws IOException {
 

@@ -5,8 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-import nimbus.main.NimbusConf;
-
 import org.apache.log4j.Logger;
 
 /**
@@ -29,7 +27,6 @@ public class CList implements List<String> {
 		LOG.info("Loading native libraries from: "
 				+ System.getProperty("java.library.path"));
 		System.loadLibrary("NativeNimbus");
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
 	}
 
 	protected class CListIterator implements Iterator<String> {

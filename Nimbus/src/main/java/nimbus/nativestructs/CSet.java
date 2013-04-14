@@ -4,8 +4,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 
-import nimbus.main.NimbusConf;
-
 import org.apache.log4j.Logger;
 
 /**
@@ -23,34 +21,49 @@ public class CSet implements Set<String> {
 
 	private static final Logger LOG = Logger.getLogger(CSet.class);
 	private static CSet s_instance = null;
+	private int si;
 
 	static {
 		LOG.info("Loading native libraries from: "
 				+ System.getProperty("java.library.path"));
 		System.loadLibrary("NativeNimbus");
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
-
-	public static CSet getInstance() {
-		if (s_instance == null) {
-			s_instance = new CSet();
-		}
-		return s_instance;
+		LOG.info("Loaded native library");
 	}
 
 	/**
 	 * Initializes a new instance of the CSet
 	 */
-	private CSet() {
-		c_clear();
+	public CSet() {
+		this.si = newSet();
 	}
+	
+	/**
+	 * Creates a pointer to the CSet identified by the index
+	 */
+	public CSet(int index) {
+		this.si = index;
+	}
+	
+	@Override
+	protected void finalize() throws Throwable {
+		this.delete(si);
+		super.finalize();
+	}
+	
+	public void deleteCSet() {
+		this.delete(si);
+	}
+	
+	private native void delete(int index);
+
+	private native int newSet();
 
 	@Override
 	public boolean add(String e) {
-		return c_add(e);
+		return c_add(si, e);
 	}
 
-	private native boolean c_add(String e);
+	private native boolean c_add(int si, String e);
 
 	@Override
 	public boolean addAll(Collection<? extends String> c) {
@@ -64,17 +77,17 @@ public class CSet implements Set<String> {
 
 	@Override
 	public void clear() {
-		c_clear();
+		c_clear(si);
 	}
 
-	private native void c_clear();
+	private native void c_clear(int si);
 
 	@Override
 	public boolean contains(Object o) {
-		return c_contains(o.toString());
+		return c_contains(si, o.toString());
 	}
 
-	private native boolean c_contains(String o);
+	private native boolean c_contains(int si, String o);
 
 	@Override
 	public boolean containsAll(Collection<?> c) {
@@ -88,17 +101,17 @@ public class CSet implements Set<String> {
 
 	@Override
 	public boolean isEmpty() {
-		return c_isEmpty();
+		return c_isEmpty(si);
 	}
 
-	private native boolean c_isEmpty();
+	private native boolean c_isEmpty(int si);
 
 	@Override
 	public boolean remove(Object o) {
-		return c_remove(o.toString());
+		return c_remove(si, o.toString());
 	}
 
-	private native boolean c_remove(String o);
+	private native boolean c_remove(int si, String o);
 
 	@Override
 	public boolean removeAll(Collection<?> c) {
@@ -112,10 +125,10 @@ public class CSet implements Set<String> {
 
 	@Override
 	public int size() {
-		return c_size();
+		return c_size(si);
 	}
 
-	private native int c_size();
+	private native int c_size(int si);
 
 	/**
 	 * <b>This method is not supported and throws a RuntimeException</b>
@@ -124,7 +137,7 @@ public class CSet implements Set<String> {
 	 */
 	@Override
 	public Iterator<String> iterator() {
-		throw new RuntimeException("Not yet implemented");
+		return new CSetIterator(si, this);
 	}
 
 	/**
@@ -156,5 +169,39 @@ public class CSet implements Set<String> {
 	@Override
 	public Object[] toArray(Object[] a) {
 		throw new RuntimeException("Not yet implemented");
+	}
+
+	private native int c_iterInit(int si);
+
+	private native boolean c_iterHasNext(int si, int index);
+
+	private native String c_iterNext(int si, int index);
+
+	public static class CSetIterator implements Iterator<String> {
+
+		private CSet set = null;
+		private int si;
+		private int index;
+
+		public CSetIterator(int si, CSet set) {
+			this.si = si;
+			this.set = set;
+			index = set.c_iterInit(si);
+		}
+
+		@Override
+		public boolean hasNext() {
+			return set.c_iterHasNext(si, index);
+		}
+
+		@Override
+		public String next() {
+			return set.c_iterNext(si, index);
+		}
+
+		@Override
+		public void remove() {
+			throw new RuntimeException("CSetIterator::remove is not supported");
+		}
 	}
 }

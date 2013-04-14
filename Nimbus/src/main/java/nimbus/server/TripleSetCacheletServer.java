@@ -27,10 +27,6 @@ public class TripleSetCacheletServer extends ICacheletServer {
 	private static final Logger LOG = Logger
 			.getLogger(TripleSetCacheletServer.class);
 
-	static {
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
-	}
-
 	@Override
 	protected ICacheletWorker getNewWorker() {
 		return new TripleSetCacheletWorker(this);

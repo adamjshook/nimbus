@@ -4,7 +4,7 @@ JAVA_HOME="/usr/lib/jvm/java-1.6.0-openjdk"
 
 rm *.o
 
-g++ -fPIC -I$JAVA_HOME/include/ -I$JAVA_HOME/include/linux/ -c *.cpp
+g++ -Wno-deprecated -fPIC -I$JAVA_HOME/include/ -I$JAVA_HOME/include/linux/ -c *.cpp
 
 if [ $? -ne 0 ]; then
 	echo "Build error"
@@ -14,7 +14,7 @@ fi
 g++ -shared *.o -o libNativeNimbus.so
 
 if [ $? -ne 0 ]; then
-        echo "Build error"
+        echo "Link error"
         exit 1
 fi
 

@@ -23,6 +23,8 @@ mkdir -p ${LOG_DIR}
 
 NIMBUS_CLASSPATH="${NIMBUS_HOME}/lib:${NIMBUS_HOME}/conf:${HADOOP_HOME}/conf"
 
+NIMBUS_JAVA_OPTS="-Xmx2048m -Xms1024m"
+
 JAVA=`which java`
 
 NIMBUS_EXEC="${JAVA} ${NIMBUS_JAVA_OPTS} -Djava.library.path=${NIMBUS_HOME}/bin/native -classpath ${NIMBUS_CLASSPATH} -jar ${NIMBUS_JAR_FILE} -start"

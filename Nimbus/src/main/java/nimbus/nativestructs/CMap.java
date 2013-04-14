@@ -4,8 +4,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-import nimbus.main.NimbusConf;
-
 import org.apache.log4j.Logger;
 
 /**
@@ -28,7 +26,6 @@ public class CMap implements Map<String, String> {
 		LOG.info("Loading native libraries from: "
 				+ System.getProperty("java.library.path"));
 		System.loadLibrary("NativeNimbus");
-		LOG.setLevel(NimbusConf.getConf().getLog4JLevel());
 	}
 
 	public static CMap getInstance() {
