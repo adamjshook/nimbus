@@ -169,9 +169,7 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 
 		public DynamicSetCacheletIterator() {
 			try {
-				LOG.info("Writing get command");
 				write(DynamicSetCacheletWorker.GET_CMD);
-				LOG.info("Waiting for ACK");
 				if (in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
 					throw new IOException("Did not receive ACK_CMD");
 				}

@@ -29,11 +29,7 @@ public class NimbusInputStream extends InputStream {
 			throw new IOException("Token is not the cmd token");
 		}
 
-		int cmd = strm.readInt();
-
-		testCrLf();
-
-		return cmd;
+		return strm.readInt();
 	}
 
 	public long readNumArgs() throws IOException {
@@ -43,11 +39,7 @@ public class NimbusInputStream extends InputStream {
 			throw new IOException("Token is not the args token: " + argsToken);
 		}
 
-		long numArgs = strm.readLong();
-
-		testCrLf();
-
-		return numArgs;
+		return strm.readLong();
 	}
 
 	public byte[] readArg() throws IOException {
@@ -59,14 +51,9 @@ public class NimbusInputStream extends InputStream {
 
 		int numBytes = strm.readInt();
 		byte[] bytes = new byte[numBytes];
-
-		testCrLf();
-
 		for (int i = 0; i < numBytes; ++i) {
 			bytes[i] = strm.readByte();
 		}
-
-		testCrLf();
 
 		return bytes;
 	}
@@ -77,20 +64,6 @@ public class NimbusInputStream extends InputStream {
 		if (token != NimbusOutputStream.END_CMD_TOKEN) {
 			throw new IOException("Token is not the end command token: "
 					+ token);
-		}
-
-		testCrLf();
-	}
-
-	private void testCrLf() throws IOException {
-		char cr = strm.readChar();
-		char lf = strm.readChar();
-
-		if (cr != NimbusOutputStream.CR) {
-			throw new IOException("Token is not the CR token: " + cr);
-		}
-		if (lf != NimbusOutputStream.LF) {
-			throw new IOException("Token is not the LF token: " + lf);
 		}
 	}
 
