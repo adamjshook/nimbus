@@ -10,7 +10,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
-import nimbus.client.NimbusSetClient;
+import nimbus.client.StaticSetClient;
 import nimbus.client.MasterClient;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheExistsException;
@@ -22,9 +22,9 @@ import nimbus.server.CacheType;
  * ingest a file into a Distributed Set.
  * 
  */
-public class SetIngestor {
+public class StaticSetIngestor {
 
-	private static final Logger LOG = Logger.getLogger(SetIngestor.class);
+	private static final Logger LOG = Logger.getLogger(StaticSetIngestor.class);
 
 	public static void main(String args[]) throws NumberFormatException,
 			CacheExistsException, CacheDoesNotExistException, IOException {
@@ -99,7 +99,7 @@ public class SetIngestor {
 						throw new CacheExistsException(cacheName);
 					}
 				} else {
-					master.createCache(cacheName, CacheType.DISTRIBUTED_SET);
+					master.createCache(cacheName, CacheType.STATIC_SET);
 					
 					while (!master.exists(cacheName)) {
 						LOG.info("Cache does not exist yet... Sleeping");
@@ -110,7 +110,7 @@ public class SetIngestor {
 				master.disconnect();
 			}
 			Thread.sleep(1000);
-			NimbusSetClient set = new NimbusSetClient(cacheName,
+			StaticSetClient set = new StaticSetClient(cacheName,
 					false);
 			set.read(file, approxNumRecords, falsePositiveRate,
 					false);
@@ -151,7 +151,7 @@ public class SetIngestor {
 	public static boolean verify(String cacheName, Path file)
 			throws CacheDoesNotExistException, IOException {
 
-		NimbusSetClient set = new NimbusSetClient(cacheName);
+		StaticSetClient set = new StaticSetClient(cacheName);
 		BufferedReader rdr = new BufferedReader(new InputStreamReader(
 				FileSystem.get(NimbusConf.getConf()).open(file)));
 

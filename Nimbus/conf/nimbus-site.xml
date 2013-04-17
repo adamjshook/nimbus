@@ -23,4 +23,8 @@
     <name>nimbus.home</name>
     <value>/home/mrdp/nimbus-git/Nimbus</value>
   </property>
+  <property>
+    <name>zk.session.timeout</name>
+    <value>2147483640</value>
+  </property>
 </configuration>

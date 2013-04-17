@@ -11,10 +11,16 @@ public enum CacheType {
 	MASTER,
 
 	/**
-	 * The Distributed Set is a Cache that evenly distributes a large data set
+	 * The Static Set is a Cache that evenly distributes a large data set
+	 * over all Cachelets in the Cache based on a static file from HDFS
+	 */
+	STATIC_SET,
+	
+	/**
+	 * The Dynamic Set is a Cache that evenly distributes a large data set
 	 * over all Cachelets in the Cache.
 	 */
-	DISTRIBUTED_SET,
+	DYNAMIC_SET,
 
 	/**
 	 * The triple store is a Cache that distributes a large data set of Triples

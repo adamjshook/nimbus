@@ -25,11 +25,11 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import nimbus.client.CacheletsUnavailableException;
-import nimbus.client.NimbusSetClient;
+import nimbus.client.StaticSetClient;
 import nimbus.client.MasterClient;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheExistsException;
-import nimbus.utils.SetIngestor;
+import nimbus.utils.StaticSetIngestor;
 
 public class NimbusSetTest {
 
@@ -144,7 +144,7 @@ public class NimbusSetTest {
 		LOG.write("Ingesting file " + p + "...");
 		LOG.flush();
 		start = System.currentTimeMillis();
-		if (!SetIngestor.ingest(true, p.getName(), p, numRecords, .05f)) {
+		if (!StaticSetIngestor.ingest(true, p.getName(), p, numRecords, .05f)) {
 			return -1;
 		}
 		finish = System.currentTimeMillis();
@@ -160,7 +160,7 @@ public class NimbusSetTest {
 		LOG.write("Verifying file " + p + "...");
 		LOG.flush();
 		long start = System.currentTimeMillis(), finish;
-		SetIngestor.verify(p.getName(), p);
+		StaticSetIngestor.verify(p.getName(), p);
 		finish = System.currentTimeMillis();
 		LOG.write(" Done.  Took " + (finish - start) + "ms.  Average "
 				+ (float) (finish - start) / numRecords + " ms per record.\n");
@@ -245,7 +245,7 @@ public class NimbusSetTest {
 	private static class MyMapper extends
 			Mapper<LongWritable, Text, Text, Text> {
 
-		private NimbusSetClient set = null;
+		private StaticSetClient set = null;
 		private Random rndm = new Random();
 		private float hitPercentage = 0.0f;
 		private long start, finish;
@@ -254,7 +254,7 @@ public class NimbusSetTest {
 				InterruptedException {
 			try {
 				long start = System.currentTimeMillis();
-				set = new NimbusSetClient(context.getConfiguration().get(
+				set = new StaticSetClient(context.getConfiguration().get(
 						"nimbus.cache.name"));
 				long end = System.currentTimeMillis();
 				context.getCounter("NimbusBenchmark", "BF Download Accum Time")

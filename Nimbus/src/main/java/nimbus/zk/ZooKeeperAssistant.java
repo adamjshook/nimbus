@@ -147,7 +147,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 	 *            The mode to create the lock for
 	 * @return True if the lock is achieved, false is somebody else has it
 	 */
-	public boolean lockPath(String path) {
+	public synchronized boolean lockPath(String path) {
 		try {
 			keeper.create(path, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE,
 					CreateMode.EPHEMERAL);
@@ -173,15 +173,15 @@ public class ZooKeeperAssistant implements ConnectListener {
 		}
 	}
 
-	public void ensurePaths(String path) {
+	public synchronized void ensurePaths(String path) {
 		ensurePaths(path, true);
 	}
 
-	public void ensurePaths(String path, CreateMode mode) {
+	public synchronized void ensurePaths(String path, CreateMode mode) {
 		ensurePaths(path, true, mode);
 	}
 
-	public void ensurePaths(String path, boolean recursive) {
+	public synchronized void ensurePaths(String path, boolean recursive) {
 		String absPath = makeAbsolutePath(path);
 		if (absPath != null) {
 			if (recursive) {
@@ -192,7 +192,8 @@ public class ZooKeeperAssistant implements ConnectListener {
 		}
 	}
 
-	public void ensurePaths(String path, boolean recursive, CreateMode mode) {
+	public synchronized void ensurePaths(String path, boolean recursive,
+			CreateMode mode) {
 		String absPath = makeAbsolutePath(path);
 		if (absPath != null) {
 			if (recursive) {
@@ -203,7 +204,8 @@ public class ZooKeeperAssistant implements ConnectListener {
 		}
 	}
 
-	private void ensureNonRecursivePath(String absPath, CreateMode mode) {
+	private synchronized void ensureNonRecursivePath(String absPath,
+			CreateMode mode) {
 		try {
 			keeper.create(absPath, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, mode);
 			LOG.info("Created " + absPath);
@@ -274,7 +276,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 		}
 	}
 
-	public boolean exists(String path) {
+	public synchronized boolean exists(String path) {
 		String absPath = makeAbsolutePath(path);
 
 		try {
@@ -315,7 +317,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 		}
 	}
 
-	public void deletePaths(String path, boolean recursive) {
+	public synchronized void deletePaths(String path, boolean recursive) {
 		String absPath = makeAbsolutePath(path);
 
 		try {
@@ -554,7 +556,8 @@ public class ZooKeeperAssistant implements ConnectListener {
 		return getDataVariable(path, null, def);
 	}
 
-	public byte[] getDataVariable(String path, Watcher watch, byte[] def) {
+	public synchronized byte[] getDataVariable(String path, Watcher watch,
+			byte[] def) {
 		byte[] data = null;
 		try {
 			if (watch != null) {
@@ -606,7 +609,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 		}
 	}
 
-	public boolean setDataVariable(String path, byte[] data) {
+	public synchronized boolean setDataVariable(String path, byte[] data) {
 		LOG.trace("Setting " + path + " to " + data.length + " bytes.");
 		String absPath = makeAbsolutePath(path);
 
@@ -801,11 +804,11 @@ public class ZooKeeperAssistant implements ConnectListener {
 		return setDataVariable(path, str.getBytes());
 	}
 
-	public List<String> getChildren(String path) {
+	public synchronized List<String> getChildren(String path) {
 		return getChildren(path, null);
 	}
 
-	public List<String> getChildren(String path, Watcher watch) {
+	public synchronized List<String> getChildren(String path, Watcher watch) {
 		String absPath = makeAbsolutePath(path);
 
 		if (absPath == null) {
@@ -861,7 +864,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 		return keeper;
 	}
 
-	public void close() {
+	public synchronized void close() {
 		if (keeper != null) {
 			try {
 				keeper.close();

@@ -11,11 +11,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import nimbus.client.NimbusSetClient;
+import nimbus.client.StaticSetClient;
 import nimbus.client.MasterClient;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheExistsException;
-import nimbus.utils.SetIngestor;
+import nimbus.utils.StaticSetIngestor;
 
 public class NimbusSetIngestPrint {
 
@@ -55,7 +55,7 @@ public class NimbusSetIngestPrint {
 			for (int i = 0; i < 5; ++i) {
 				long startTime = System.currentTimeMillis();
 
-				NimbusSetClient client = new NimbusSetClient(p.getName());
+				StaticSetClient client = new StaticSetClient(p.getName());
 				int numRecords = 0;
 
 				for (String s : client) {
@@ -99,7 +99,7 @@ public class NimbusSetIngestPrint {
 		int numRecords = Integer.parseInt(namechunks[namechunks.length - 1]);
 		start = System.currentTimeMillis();
 
-		if (!SetIngestor.ingest(true, p.getName(), p, numRecords, .05f)) {
+		if (!StaticSetIngestor.ingest(true, p.getName(), p, numRecords, .05f)) {
 			return -1;
 		}
 

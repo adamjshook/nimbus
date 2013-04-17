@@ -4,9 +4,9 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 
-public class SetCacheletWorker extends ICacheletWorker {
+public class StaticSetCacheletWorker extends ICacheletWorker {
 
-	private static final Logger LOG = Logger.getLogger(SetCacheletWorker.class);
+	private static final Logger LOG = Logger.getLogger(StaticSetCacheletWorker.class);
 
 	/**
 	 * The CONTAINS command will determine if a given element is a member of
@@ -25,10 +25,10 @@ public class SetCacheletWorker extends ICacheletWorker {
 	 */
 	public static final int GET = 3;
 
-	private SetCacheletServer server = null;
+	private StaticSetCacheletServer server = null;
 	private static final String HELP_MESSAGE = "Invalid input.";
 
-	public SetCacheletWorker(SetCacheletServer server) {
+	public StaticSetCacheletWorker(StaticSetCacheletServer server) {
 		this.server = server;
 	}
 

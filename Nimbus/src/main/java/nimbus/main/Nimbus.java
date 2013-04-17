@@ -26,10 +26,11 @@ import nimbus.client.MasterClient;
 import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
 import nimbus.master.NimbusSafetyNet;
+import nimbus.server.DynamicSetCacheletServer;
 import nimbus.server.ICacheletServer;
 import nimbus.server.CacheType;
 import nimbus.server.MapSetCacheletServer;
-import nimbus.server.SetCacheletServer;
+import nimbus.server.StaticSetCacheletServer;
 import nimbus.server.MasterCacheletServer;
 import nimbus.utils.BigBitArray;
 import nimbus.utils.NimbusException;
@@ -121,9 +122,13 @@ public class Nimbus extends Configured implements Tool {
 
 		// create my Cachelet
 		switch (info.getType()) {
-		case DISTRIBUTED_SET:
-			cachelet = new SetCacheletServer(info.getName(), cacheletName,
-					info.getPort(), info.getType());
+		case STATIC_SET:
+			cachelet = new StaticSetCacheletServer(info.getName(),
+					cacheletName, info.getPort(), info.getType());
+			break;
+		case DYNAMIC_SET:
+			cachelet = new DynamicSetCacheletServer(info.getName(),
+					cacheletName, info.getPort(), info.getType());
 			break;
 		case MASTER:
 			cachelet = new MasterCacheletServer(info.getName(), cacheletName,
@@ -133,6 +138,10 @@ public class Nimbus extends Configured implements Tool {
 			cachelet = new MapSetCacheletServer(info.getName(), cacheletName,
 					info.getPort(), info.getType());
 			break;
+		default:
+			LOG.error("Unkown type " + info.getType().toString()
+					+ ". Shutting down");
+			System.exit(0);
 		}
 
 		Thread t = new Thread(cachelet);

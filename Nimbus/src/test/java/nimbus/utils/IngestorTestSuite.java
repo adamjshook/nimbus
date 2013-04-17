@@ -17,11 +17,11 @@ import org.junit.After;
 import org.junit.Test;
 
 import nimbus.client.CacheletsUnavailableException;
-import nimbus.client.NimbusSetClient;
+import nimbus.client.StaticSetClient;
 import nimbus.client.MasterClient;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheExistsException;
-import nimbus.utils.SetIngestor;
+import nimbus.utils.StaticSetIngestor;
 
 import junit.framework.TestSuite;
 
@@ -32,7 +32,7 @@ public class IngestorTestSuite extends TestSuite {
 	private static int APPROX_NUM_RECORDS = 5;
 	private static final int TEST_BAD_RECORDS = 1000000;
 	private static final float FALSE_POSITIVE_RATE = .05f;
-	private static NimbusSetClient client = null;
+	private static StaticSetClient client = null;
 
 	static {
 		try {
@@ -56,12 +56,12 @@ public class IngestorTestSuite extends TestSuite {
 		System.out.print("Ingesting... ");
 		long start, finish;
 		start = System.currentTimeMillis();
-		SetIngestor.ingest(true, CACHE_NAME, dest, APPROX_NUM_RECORDS,
+		StaticSetIngestor.ingest(true, CACHE_NAME, dest, APPROX_NUM_RECORDS,
 				FALSE_POSITIVE_RATE);
 		finish = System.currentTimeMillis();
 		System.out.println("... Done. Took " + (finish - start) + " ms.");
 		Thread.sleep(5000);
-		client = new NimbusSetClient(CACHE_NAME);
+		client = new StaticSetClient(CACHE_NAME);
 
 		BufferedReader rdr = new BufferedReader(new InputStreamReader(fs
 				.open(dest)));

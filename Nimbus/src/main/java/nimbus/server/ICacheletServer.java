@@ -84,6 +84,7 @@ public abstract class ICacheletServer implements Runnable {
 				
 				Thread t = new Thread(w);
 				t.start();
+				LOG.info("Started a new worker");
 			} catch (IOException e) {
 				LOG.error("Accept failed: " + e.getMessage());
 				System.exit(1);

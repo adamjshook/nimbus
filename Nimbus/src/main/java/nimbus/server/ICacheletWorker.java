@@ -71,7 +71,8 @@ public abstract class ICacheletWorker implements Runnable {
 					out.flush();
 				}
 			}
-
+			
+			LOG.info("Closing worker");
 			out.close();
 			in.close();
 		} catch (SocketException e) {

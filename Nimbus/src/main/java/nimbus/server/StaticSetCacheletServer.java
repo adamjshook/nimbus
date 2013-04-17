@@ -21,12 +21,12 @@ import nimbus.nativestructs.CSet;
 import nimbus.utils.BloomFilter;
 import nimbus.utils.ICacheletHash;
 
-public class SetCacheletServer extends ICacheletServer implements
+public class StaticSetCacheletServer extends ICacheletServer implements
 		Iterable<String> {
 
 	private CSet set = new CSet();
 	private static BloomFilter bfilter = null;
-	private static final Logger LOG = Logger.getLogger(SetCacheletServer.class);
+	private static final Logger LOG = Logger.getLogger(StaticSetCacheletServer.class);
 
 	public static Path getBloomFilterPath(String cacheName, String cacheletName) {
 		return new Path(Nimbus.ROOT_ZNODE + "/" + cacheName + "/"
@@ -35,7 +35,7 @@ public class SetCacheletServer extends ICacheletServer implements
 
 	@Override
 	protected ICacheletWorker getNewWorker() {
-		return new SetCacheletWorker(this);
+		return new StaticSetCacheletWorker(this);
 	}
 
 	@Override
@@ -57,7 +57,7 @@ public class SetCacheletServer extends ICacheletServer implements
 		acceptConnections();
 	}
 
-	public SetCacheletServer(String cacheName, String cacheletName, int port,
+	public StaticSetCacheletServer(String cacheName, String cacheletName, int port,
 			CacheType type) {
 		super(cacheName, cacheletName, port, type);
 	}
@@ -150,9 +150,9 @@ public class SetCacheletServer extends ICacheletServer implements
 
 	public class DataWatcherIngestor implements Runnable {
 
-		private SetCacheletServer server = null;
+		private StaticSetCacheletServer server = null;
 
-		public DataWatcherIngestor(SetCacheletServer server) {
+		public DataWatcherIngestor(StaticSetCacheletServer server) {
 			this.server = server;
 		}
 

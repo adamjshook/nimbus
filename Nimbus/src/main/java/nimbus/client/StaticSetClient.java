@@ -13,8 +13,8 @@ import nimbus.main.NimbusConf;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
-import nimbus.server.SetCacheletServer;
-import nimbus.server.SetCacheletWorker;
+import nimbus.server.StaticSetCacheletServer;
+import nimbus.server.StaticSetCacheletWorker;
 import nimbus.utils.BigBitArray;
 import nimbus.utils.BloomFilter;
 import nimbus.utils.DataZNodeWatcher;
@@ -23,11 +23,11 @@ import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
 import nimbus.utils.ICacheletHash;
 
-public class NimbusSetClient implements Iterable<String> {
+public class StaticSetClient implements Iterable<String> {
 
-	private static final Logger LOG = Logger.getLogger(NimbusSetClient.class);
+	private static final Logger LOG = Logger.getLogger(StaticSetClient.class);
 
-	private HashMap<Integer, NimbusSetCacheletConnection> list = new HashMap<Integer, NimbusSetCacheletConnection>();
+	private HashMap<Integer, StaticSetCacheletConnection> list = new HashMap<Integer, StaticSetCacheletConnection>();
 	private HashMap<Integer, BloomFilter> filters = new HashMap<Integer, BloomFilter>();
 	private int numServers = -1;
 
@@ -38,13 +38,13 @@ public class NimbusSetClient implements Iterable<String> {
 	private int contains_numdown = 0;
 	private String cacheName = null;
 	private int replication;
-	private NimbusSetCacheletConnection contains_connect_tmp;
+	private StaticSetCacheletConnection contains_connect_tmp;
 
 	/**
 	 * Initializes a connection to a Nimbus distributed set. Downloads the Bloom
 	 * filters by default.<br>
 	 * <br>
-	 * Use {@link NimbusSetClient#DSetClient(String, boolean)} to determine this
+	 * Use {@link StaticSetClient#DSetClient(String, boolean)} to determine this
 	 * behavior.
 	 * 
 	 * @param cacheName
@@ -52,7 +52,7 @@ public class NimbusSetClient implements Iterable<String> {
 	 * @throws CacheDoesNotExistException
 	 * @throws IOException
 	 */
-	public NimbusSetClient(String cacheName) throws CacheDoesNotExistException,
+	public StaticSetClient(String cacheName) throws CacheDoesNotExistException,
 			IOException {
 		this(cacheName, true);
 	}
@@ -71,7 +71,7 @@ public class NimbusSetClient implements Iterable<String> {
 	 * @throws IOException
 	 *             If the Bloom filters do not exist.
 	 */
-	public NimbusSetClient(String cacheName, boolean download)
+	public StaticSetClient(String cacheName, boolean download)
 			throws CacheDoesNotExistException, IOException {
 		this.cacheName = cacheName;
 		this.replication = NimbusConf.getConf().getReplicationFactor();
@@ -79,7 +79,7 @@ public class NimbusSetClient implements Iterable<String> {
 				.split(",");
 		for (int i = 0; i < cachelets.length; ++i) {
 			list.put(i,
-					new NimbusSetCacheletConnection(cacheName, cachelets[i]));
+					new StaticSetCacheletConnection(cacheName, cachelets[i]));
 		}
 
 		numServers = cachelets.length;
@@ -279,7 +279,7 @@ public class NimbusSetClient implements Iterable<String> {
 	 * @throws IOException
 	 */
 	public boolean isEmpty() throws IOException {
-		for (NimbusSetCacheletConnection set : list.values()) {
+		for (StaticSetCacheletConnection set : list.values()) {
 			if (!set.isEmpty()) {
 				return false;
 			}
@@ -296,7 +296,7 @@ public class NimbusSetClient implements Iterable<String> {
 	 * Disconnects this set from all Cachelets.
 	 */
 	public void disconnect() {
-		for (NimbusSetCacheletConnection worker : list.values()) {
+		for (StaticSetCacheletConnection worker : list.values()) {
 			worker.disconnect();
 		}
 	}
@@ -311,7 +311,7 @@ public class NimbusSetClient implements Iterable<String> {
 		try {
 			filters.clear();
 			long start = System.currentTimeMillis();
-			for (Entry<Integer, NimbusSetCacheletConnection> e : list
+			for (Entry<Integer, StaticSetCacheletConnection> e : list
 					.entrySet()) {
 				filters.put(e.getKey(), e.getValue().getBloomFilter());
 			}
@@ -325,7 +325,7 @@ public class NimbusSetClient implements Iterable<String> {
 
 	private class NimbusSetIterator implements Iterator<String> {
 
-		private Iterator<NimbusSetCacheletConnection> cacheletsIter = null;
+		private Iterator<StaticSetCacheletConnection> cacheletsIter = null;
 		private Iterator<String> iter = null;
 
 		public NimbusSetIterator() {
@@ -364,9 +364,9 @@ public class NimbusSetClient implements Iterable<String> {
 
 	/**
 	 * Helper class to handle connections to each Cachelet. Used by the
-	 * {@link NimbusSetClient} to... well... connect to each Cachelet.
+	 * {@link StaticSetClient} to... well... connect to each Cachelet.
 	 */
-	private class NimbusSetCacheletConnection extends BaseNimbusClient
+	private class StaticSetCacheletConnection extends BaseNimbusClient
 			implements Iterable<String> {
 
 		private String cacheletName;
@@ -384,7 +384,7 @@ public class NimbusSetClient implements Iterable<String> {
 		 * @throws IOException
 		 *             If some bad juju happens.
 		 */
-		public NimbusSetCacheletConnection(String cacheName, String cacheletName)
+		public StaticSetCacheletConnection(String cacheName, String cacheletName)
 				throws CacheDoesNotExistException, IOException {
 			super(cacheletName, NimbusMaster.getInstance().getCachePort(
 					cacheName));
@@ -403,7 +403,7 @@ public class NimbusSetClient implements Iterable<String> {
 		 * @throws IOException
 		 */
 		public boolean contains(String element) throws IOException {
-			writeLine(SetCacheletWorker.CONTAINS + " " + element);
+			writeLine(StaticSetCacheletWorker.CONTAINS + " " + element);
 			String response = readLine();
 			if (response.equals("true")) {
 				return true;
@@ -423,7 +423,7 @@ public class NimbusSetClient implements Iterable<String> {
 		 *             If an error occurs when sending the request.
 		 */
 		public boolean isEmpty() throws IOException {
-			writeLine(Integer.toString(SetCacheletWorker.ISEMPTY));
+			writeLine(Integer.toString(StaticSetCacheletWorker.ISEMPTY));
 			String response = readLine();
 			return Boolean.parseBoolean(response);
 		}
@@ -439,7 +439,7 @@ public class NimbusSetClient implements Iterable<String> {
 		 *             deserializing the filter.
 		 */
 		public BloomFilter getBloomFilter() throws IOException {
-			return new BloomFilter(SetCacheletServer.getBloomFilterPath(
+			return new BloomFilter(StaticSetCacheletServer.getBloomFilterPath(
 					cacheName, cacheletName));
 		}
 
@@ -455,7 +455,7 @@ public class NimbusSetClient implements Iterable<String> {
 
 			public NimbusSetCacheletIterator() {
 				try {
-					writeLine(Integer.toString(SetCacheletWorker.GET));
+					writeLine(Integer.toString(StaticSetCacheletWorker.GET));
 					numEntries = Integer.parseInt(readLine());
 				} catch (Exception e) {
 					throw new RuntimeException(e);

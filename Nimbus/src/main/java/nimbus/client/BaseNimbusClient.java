@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.util.Collection;
 
 import nimbus.main.NimbusConf;
 
@@ -161,20 +162,57 @@ public class BaseNimbusClient implements Runnable {
 	}
 
 	/**
-	 * Writes the given String and a newline character to the output stream and
+	 * Writes the given int and a newline character to the output stream and
 	 * flushes the stream.
+	 * 
+	 * @param num
+	 *            The integer to broadcast
+	 * @throws IOException
+	 *             If an error occurs when sending the message.
+	 */
+	public void writeLine(int num) throws IOException {
+		if (connected) {
+			out.write(num + "\n");
+			out.flush();
+		} else {
+			throw new CacheletNotConnectedException(host);
+		}
+	}
+
+	/**
+	 * Writes the given String and a newline character to the output stream
 	 * 
 	 * @param msg
 	 *            The string to broadcast
 	 * @throws IOException
 	 *             If an error occurs when sending the message.
 	 */
-	public void writeLine(String msg) throws IOException {
+	public void writeLine(String msg) throws IOException, CacheletNotConnectedException {
 		if (connected) {
 			out.write(msg + "\n");
 			out.flush();
 		} else {
-			throw new CacheletNotConnectedException();
+			throw new CacheletNotConnectedException(host);
+		}
+	}
+
+	/**
+	 * Writes the given Collection of String to the output stream, appending a
+	 * newline character to each string
+	 * 
+	 * @param msg
+	 *            The strings to broadcast
+	 * @throws IOException
+	 *             If an error occurs when sending the message.
+	 */
+	public void writeLines(Collection<? extends String> msg) throws IOException {
+		if (connected) {
+			for (String s : msg) {
+				out.write(s + "\n");
+			}
+			out.flush();
+		} else {
+			throw new CacheletNotConnectedException(host);
 		}
 	}
 
