@@ -89,7 +89,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 	/**
 	 * Disconnects this set from all Cachelets.
 	 */
-	public void disconnect() {
+	public synchronized void disconnect() {
 		for (DynamicSetCacheletConnection worker : list.values()) {
 			try {
 				worker.disconnect();
@@ -100,7 +100,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		tempConnectionSet = null;
 	}
 
-	public boolean addNow(String element) throws CacheletNotConnectedException {
+	public synchronized boolean addNow(String element) throws CacheletNotConnectedException {
 
 		tempConnectionSet.clear();
 		cacheletHash.getCacheletsFromKey(element, tempConnectionSet,
@@ -131,7 +131,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return retval;
 	}
 
-	public void add(String element) throws CacheletNotConnectedException {
+	public synchronized void add(String element) throws CacheletNotConnectedException {
 
 		synchronized (bufferedElements) {
 			// for each element in the set, add it to the mini shards
@@ -150,7 +150,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		}
 	}
 
-	public void addAll(Collection<? extends String> c)
+	public synchronized void addAll(Collection<? extends String> c)
 			throws CacheletNotConnectedException {
 
 		for (String s : c) {
@@ -160,7 +160,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		flush();
 	}
 
-	public void flush() throws CacheletNotConnectedException {
+	public synchronized void flush() throws CacheletNotConnectedException {
 		synchronized (bufferedElements) {
 			int numEntries = 0;
 			for (Entry<Integer, Set<String>> entry : bufferedElements
@@ -204,7 +204,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		}
 	}
 
-	public void clear() throws CacheletNotConnectedException {
+	public synchronized void clear() throws CacheletNotConnectedException {
 		for (Entry<Integer, DynamicSetCacheletConnection> entry : list
 				.entrySet()) {
 			try {
@@ -226,7 +226,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		}
 	}
 
-	public boolean contains(String element)
+	public synchronized boolean contains(String element)
 			throws CacheletNotConnectedException {
 
 		tempConnectionSet.clear();
@@ -261,7 +261,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return false;
 	}
 
-	public boolean containsAll(Collection<String> c)
+	public synchronized boolean containsAll(Collection<String> c)
 			throws CacheletNotConnectedException {
 		for (String o : c) {
 			if (!contains(o)) {
@@ -272,7 +272,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return true;
 	}
 
-	public boolean isEmpty() throws CacheletNotConnectedException {
+	public synchronized boolean isEmpty() throws CacheletNotConnectedException {
 		for (Entry<Integer, DynamicSetCacheletConnection> entry : list
 				.entrySet()) {
 			try {
@@ -301,7 +301,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return true;
 	}
 
-	public boolean remove(String element) throws CacheletNotConnectedException {
+	public synchronized boolean remove(String element) throws CacheletNotConnectedException {
 		tempConnectionSet.clear();
 		cacheletHash.getCacheletsFromKey(element, tempConnectionSet,
 				numServers, replication);
@@ -331,7 +331,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return retval;
 	}
 
-	public boolean removeAll(Collection<String> c)
+	public synchronized boolean removeAll(Collection<String> c)
 			throws CacheletNotConnectedException {
 		boolean retval = false;
 		for (String s : c) {
@@ -341,7 +341,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return retval;
 	}
 
-	public boolean retainAll(Collection<String> c)
+	public synchronized boolean retainAll(Collection<String> c)
 			throws CacheletNotConnectedException {
 
 		boolean retval = false;
@@ -370,7 +370,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return retval;
 	}
 
-	public int size() throws CacheletNotConnectedException {
+	public synchronized int size() throws CacheletNotConnectedException {
 		int size = 0;
 		for (Entry<Integer, DynamicSetCacheletConnection> entry : list
 				.entrySet()) {
