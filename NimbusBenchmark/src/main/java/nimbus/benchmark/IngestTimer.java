@@ -24,9 +24,9 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import nimbus.client.CacheletsUnavailableException;
 import nimbus.client.StaticSetClient;
-import nimbus.client.MasterClient;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheExistsException;
+import nimbus.master.NimbusMaster;
 import nimbus.utils.StaticSetIngestor;
 
 public class IngestTimer {
@@ -75,7 +75,7 @@ public class IngestTimer {
 		System.out.println(fs.getConf().get("fs.default.name"));
 		System.out.println(fs.getConf().get("mapred.job.tracker"));
 		System.out.print("Connecting to master...");
-		MasterClient master = new MasterClient();
+		NimbusMaster master = NimbusMaster.getInstance();
 		System.out.println(" Connected.");
 		FileStatus[] statuses = fs.listStatus(new Path(args[0]));
 		long ingesttime = 0, verifytime = 0, analytictime1 = 0, analytictime2 = 0, analytictime3 = 0;
@@ -91,15 +91,13 @@ public class IngestTimer {
 			analytictime1 = analytic(p, .01f);
 			analytictime2 = analytic(p, .05f);
 			analytictime3 = analytic(p, .10f);
-			ingestmap.put(p.toString(), new Fif<Long, Long, Long, Long, Long>(ingesttime, verifytime,
-					analytictime1, analytictime2, analytictime3));
+			ingestmap.put(p.toString(), new Fif<Long, Long, Long, Long, Long>(
+					ingesttime, verifytime, analytictime1, analytictime2,
+					analytictime3));
 
 			Thread.sleep(15000);
-			try {
-				master.destroyCache(status.getPath().getName());
-			} catch (IOException e) {
-				// nothing
-			}
+
+			master.destroy(status.getPath().getName());
 		}
 
 		ArrayList<String> list = new ArrayList<String>();
@@ -179,7 +177,7 @@ public class IngestTimer {
 		if (FileSystem.get(job.getConfiguration()).exists(outdir)) {
 			FileSystem.get(job.getConfiguration()).delete(outdir, true);
 		}
-		
+
 		TextInputFormat.addInputPath(job, p);
 		job.setInputFormatClass(TextInputFormat.class);
 
@@ -193,7 +191,7 @@ public class IngestTimer {
 				"false");
 		job.getConfiguration().set("hit.percentage",
 				Float.toString(hitpercentage));
-		//job.getConfiguration().set("mapred.child.java.opts", "-Xmx4G");
+		// job.getConfiguration().set("mapred.child.java.opts", "-Xmx4G");
 		job.getConfiguration().set("mapred.task.timeout", "1800000");
 
 		job.setMapperClass(MyMapper.class);
@@ -207,15 +205,27 @@ public class IngestTimer {
 		job.waitForCompletion(false);
 		finish = System.currentTimeMillis();
 
-		float hits = job.getCounters().findCounter("NimbusBenchmark",
-				"Num Hits").getValue();
-		float accumtime = job.getCounters().findCounter("NimbusBenchmark",
-				"Contains Accum Time").getValue();
-		float dltime = job.getCounters().findCounter("NimbusBenchmark",
-				"BF Download Accum Time").getValue();
-		LOG.write(" Done.  Took " + (finish - start) + "ms.\nHits: " + hits
-				+ "  Accum Time: " + accumtime + "  Avg: " + accumtime / hits
-				+ "\nDL Time: " + dltime / Float.parseFloat(job.getConfiguration().get("mapred.map.tasks"))+ "\n");
+		float hits = job.getCounters()
+				.findCounter("NimbusBenchmark", "Num Hits").getValue();
+		float accumtime = job.getCounters()
+				.findCounter("NimbusBenchmark", "Contains Accum Time")
+				.getValue();
+		float dltime = job.getCounters()
+				.findCounter("NimbusBenchmark", "BF Download Accum Time")
+				.getValue();
+		LOG.write(" Done.  Took "
+				+ (finish - start)
+				+ "ms.\nHits: "
+				+ hits
+				+ "  Accum Time: "
+				+ accumtime
+				+ "  Avg: "
+				+ accumtime
+				/ hits
+				+ "\nDL Time: "
+				+ dltime
+				/ Float.parseFloat(job.getConfiguration().get(
+						"mapred.map.tasks")) + "\n");
 		LOG.flush();
 		return finish - start;
 	}

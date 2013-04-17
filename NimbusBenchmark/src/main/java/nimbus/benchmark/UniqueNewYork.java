@@ -13,7 +13,6 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Logger;
 
 public class UniqueNewYork extends Configured implements Tool {
 
@@ -50,7 +49,7 @@ public class UniqueNewYork extends Configured implements Tool {
 	public static class KeyValueUniquer extends Reducer<Text, Text, Text, Text> {
 
 		private long bytes = 0;
-		private static final long MAX_BYTES = 6L*1024L*1024L*1024L;
+		private static final long MAX_BYTES = 6L * 1024L * 1024L * 1024L;
 		private Text value;
 
 		@Override
@@ -64,8 +63,6 @@ public class UniqueNewYork extends Configured implements Tool {
 			}
 		}
 	}
-
-	private static final Logger LOG = Logger.getLogger(UniqueNewYork.class);
 
 	@Override
 	public int run(String[] args) throws Exception {

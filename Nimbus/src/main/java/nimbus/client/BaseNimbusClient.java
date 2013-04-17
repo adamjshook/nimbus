@@ -1,9 +1,6 @@
 package nimbus.client;
 
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.util.Collection;
@@ -13,6 +10,8 @@ import nimbus.main.NimbusConf;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.log4j.Logger;
 import nimbus.utils.DataZNodeWatcher;
+import nimbus.utils.NimbusInputStream;
+import nimbus.utils.NimbusOutputStream;
 
 /**
  * This is the base class for all clients in Nimbus. It handles connecting to a
@@ -35,12 +34,12 @@ public class BaseNimbusClient implements Runnable {
 		}
 	}
 
-	protected OutputStreamWriter out = null;
-	protected InputStreamReader in = null;
+	protected NimbusOutputStream out = null;
+	protected NimbusInputStream in = null;
 
 	protected String host = null;
 	protected int port = 0;
-	protected Socket echoSocket = null;
+	protected Socket socket = null;
 	protected String cacheName;
 	protected boolean connected = false;
 
@@ -96,18 +95,19 @@ public class BaseNimbusClient implements Runnable {
 		int failattempts = 10;
 		while (!connected) {
 			try {
-				echoSocket = new Socket(host, port);
+				socket = new Socket(host, port);
 				connected = true;
 				LOG.info("Connected to " + host + " on port " + port);
 			} catch (ConnectException e) {
 				--failattempts;
 				if (failattempts != 0) {
 					LOG.error("Failed to connect to " + host + " on port "
-							+ port + ".  Sleeping for " + sleep
+							+ port + ".  Sleeping for "
+							+ (sleep * (10 - failattempts))
 							+ " ms and retrying " + failattempts
 							+ " more times...");
 					try {
-						Thread.sleep(sleep);
+						Thread.sleep(sleep * (10 - failattempts));
 					} catch (InterruptedException e1) {
 						e1.printStackTrace();
 					}
@@ -118,8 +118,8 @@ public class BaseNimbusClient implements Runnable {
 			}
 		}
 
-		out = new OutputStreamWriter(echoSocket.getOutputStream());
-		in = new InputStreamReader(echoSocket.getInputStream());
+		out = new NimbusOutputStream(socket.getOutputStream());
+		in = new NimbusInputStream(socket.getInputStream());
 
 		LOG.debug("Connected to " + host + " on port " + port);
 	}
@@ -127,70 +127,50 @@ public class BaseNimbusClient implements Runnable {
 	/**
 	 * Reads from the input stream until EOF is reached.
 	 */
-	public void dumpResponses() {
-		try {
-			if (in != null && in.ready()) {
-				while (in.read() != -1) {
-				}
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public void dumpResponses() throws IOException {
+		in.skipToEOF();
 	}
 
 	/**
 	 * Closes the socket and I/O streams.
 	 */
-	public void disconnect() {
-		try {
-			connected = false;
-			if (out != null) {
-				out.close();
-				out = null;
-			}
-			if (in != null) {
-				in.close();
-				in = null;
-			}
-			if (echoSocket != null) {
-				echoSocket.close();
-				echoSocket = null;
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
+	public void disconnect() throws IOException {
+		connected = false;
+		if (out != null) {
+			out.close();
+			out = null;
+		}
+		if (in != null) {
+			in.close();
+			in = null;
+		}
+		if (socket != null) {
+			socket.close();
+			socket = null;
 		}
 	}
 
-	/**
-	 * Writes the given int and a newline character to the output stream and
-	 * flushes the stream.
-	 * 
-	 * @param num
-	 *            The integer to broadcast
-	 * @throws IOException
-	 *             If an error occurs when sending the message.
-	 */
-	public void writeLine(int num) throws IOException {
+	public void write(int cmd) throws IOException {
 		if (connected) {
-			out.write(num + "\n");
-			out.flush();
+			out.write(cmd);
 		} else {
 			throw new CacheletNotConnectedException(host);
 		}
 	}
 
-	/**
-	 * Writes the given String and a newline character to the output stream
-	 * 
-	 * @param msg
-	 *            The string to broadcast
-	 * @throws IOException
-	 *             If an error occurs when sending the message.
-	 */
-	public void writeLine(String msg) throws IOException, CacheletNotConnectedException {
+	public void write(int cmd, String... args) throws IOException,
+			CacheletNotConnectedException {
 		if (connected) {
-			out.write(msg + "\n");
-			out.flush();
+			out.write(cmd, args);
+		} else {
+			throw new CacheletNotConnectedException(host);
+		}
+	}
+
+	public void write(int cmd, byte[]... args) throws IOException,
+			CacheletNotConnectedException {
+		if (connected) {
+			out.write(cmd, args);
 		} else {
 			throw new CacheletNotConnectedException(host);
 		}
@@ -200,17 +180,15 @@ public class BaseNimbusClient implements Runnable {
 	 * Writes the given Collection of String to the output stream, appending a
 	 * newline character to each string
 	 * 
-	 * @param msg
+	 * @param args
 	 *            The strings to broadcast
 	 * @throws IOException
 	 *             If an error occurs when sending the message.
 	 */
-	public void writeLines(Collection<? extends String> msg) throws IOException {
+	public void write(int cmd, Collection<? extends String> args)
+			throws IOException {
 		if (connected) {
-			for (String s : msg) {
-				out.write(s + "\n");
-			}
-			out.flush();
+			out.write(cmd, args);
 		} else {
 			throw new CacheletNotConnectedException(host);
 		}
@@ -223,29 +201,5 @@ public class BaseNimbusClient implements Runnable {
 	 */
 	public boolean isConnected() {
 		return connected;
-	}
-
-	/**
-	 * Helper function for clients to retrieve a line of text from the input
-	 * stream.
-	 * 
-	 * @param input
-	 * @return The line of text from the input string.
-	 * @throws IOException
-	 *             If an error occurs when reading the message.
-	 * @throws EOFException
-	 *             If the end of the stream is reached.
-	 */
-	protected String readLine() throws IOException {
-		StringBuilder builder = new StringBuilder();
-		int c;
-		while ((c = in.read()) != '\n') {
-			if (c == -1) {
-				throw new EOFException();
-			}
-			builder.append((char) c);
-		}
-
-		return builder.toString();
 	}
 }

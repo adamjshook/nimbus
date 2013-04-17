@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import nimbus.main.Nimbus;
 import nimbus.main.NimbusConf;
+import nimbus.utils.BytesUtil;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -42,19 +43,19 @@ public class SafetyNetTestSuite implements ISafetyNetListener {
 		ZooKeeper zk = Nimbus.getZooKeeper().getZooKeeper();
 
 		notifiedcacheadded = false;
-		zk.create(Nimbus.ROOT_ZNODE + "/testcache", "".getBytes(),
+		zk.create(Nimbus.ROOT_ZNODE + "/testcache", BytesUtil.EMPTY_BYTES,
 				Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		Thread.sleep(100);
 		assertTrue(notifiedcacheadded);
 
 		notifiedcacheletadded = false;
-		zk.create(Nimbus.ROOT_ZNODE + "/testcache/machine1", "".getBytes(),
+		zk.create(Nimbus.ROOT_ZNODE + "/testcache/machine1", BytesUtil.EMPTY_BYTES,
 				Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		Thread.sleep(100);
 		assertTrue(notifiedcacheletadded);
 
 		notifiedcacheletadded = false;
-		zk.create(Nimbus.ROOT_ZNODE + "/testcache/machine2", "".getBytes(),
+		zk.create(Nimbus.ROOT_ZNODE + "/testcache/machine2", BytesUtil.EMPTY_BYTES,
 				Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		Thread.sleep(100);
 		assertTrue(notifiedcacheletadded);
@@ -81,13 +82,13 @@ public class SafetyNetTestSuite implements ISafetyNetListener {
 		ZooKeeper zk = Nimbus.getZooKeeper().getZooKeeper();
 
 		notifiedcacheadded = false;
-		zk.create(Nimbus.ROOT_ZNODE + "/testcache", "".getBytes(),
+		zk.create(Nimbus.ROOT_ZNODE + "/testcache", BytesUtil.EMPTY_BYTES,
 				Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		Thread.sleep(100);
 		assertTrue(notifiedcacheadded);
 
 		notifiedcacheletadded = false;
-		zk.create(Nimbus.ROOT_ZNODE + "/testcache/machine1", "".getBytes(),
+		zk.create(Nimbus.ROOT_ZNODE + "/testcache/machine1", BytesUtil.EMPTY_BYTES,
 				Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		Thread.sleep(100);
 		assertTrue(notifiedcacheletadded);
@@ -96,7 +97,7 @@ public class SafetyNetTestSuite implements ISafetyNetListener {
 		while ((System.currentTimeMillis() - startTime) <= NimbusConf.getConf()
 				.getSafetyNetTimeout() * 2) {
 			zk.setData(Nimbus.ROOT_ZNODE + "/testcache/machine1",
-					"".getBytes(), -1);
+					BytesUtil.EMPTY_BYTES, -1);
 			Thread.sleep(100);
 		}
 

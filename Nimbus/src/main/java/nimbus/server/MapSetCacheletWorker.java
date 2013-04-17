@@ -4,129 +4,100 @@ import java.io.IOException;
 import java.util.Map.Entry;
 
 import nimbus.nativestructs.CSet;
+import nimbus.utils.BytesUtil;
+import nimbus.utils.NimbusInputStream;
 
 import org.apache.log4j.Logger;
 
 public class MapSetCacheletWorker extends ICacheletWorker {
 
+	@SuppressWarnings("unused")
 	private static final Logger LOG = Logger
 			.getLogger(MapSetCacheletWorker.class);
 
-	public static final int CONTAINS_KEY = 1;
-	public static final int CONTAINS_KEY_VALUE = 2;
-	public static final int ISEMPTY = 3;
-	public static final int ADD = 4;
-	public static final int REMOVE_KEY = 5;
-	public static final int REMOVE_KEY_VALUE = 6;
-	public static final int CLEAR = 7;
-	public static final int SIZE = 8;
-	public static final int GET = 9;
-	public static final int GET_ALL = 10;
+	public static final int CONTAINS_KEY_CMD = 1;
+	public static final int CONTAINS_KEY_VALUE_CMD = 2;
+	public static final int ISEMPTY_CMD = 3;
+	public static final int ADD_CMD = 4;
+	public static final int REMOVE_KEY_CMD = 5;
+	public static final int REMOVE_KEY_VALUE_CMD = 6;
+	public static final int CLEAR_CMD = 7;
+	public static final int SIZE_CMD = 8;
+	public static final int GET_CMD = 9;
+	public static final int GET_ALL_CMD = 10;
+	public static final int ACK_CMD = 11;
 
 	private MapSetCacheletServer server = null;
-	private static final String HELP_MESSAGE = "Invalid input.";
 
 	public MapSetCacheletWorker(MapSetCacheletServer server) {
 		this.server = server;
 	}
 
 	@Override
-	public void processMessage(String theInput) throws IOException {
-		String[] tokens = theInput.split("\\s");
-		int cmd = Integer.parseInt(tokens[0]);
+	public void processMessage(int cmd, long numArgs, NimbusInputStream rdr)
+			throws IOException {
 
-		if (tokens.length == 3) {
-			processThreeArgs(cmd, tokens);
-		} else if (tokens.length == 2) {
-			processTwoArgs(cmd, tokens);
-		} else if (tokens.length == 1) {
-			processOneArg(cmd, tokens);
-		} else {
-			printHelpMessage(tokens);
-		}
-
-		out.flush();
-	}
-
-	private void processOneArg(int cmd, String[] tokens) throws IOException {
 		switch (cmd) {
-		case ISEMPTY:
-			out.write(server.isEmpty() + "\n");
+		case REMOVE_KEY_VALUE_CMD:
+			server.remove(BytesUtil.toString(rdr.readArg()),
+					BytesUtil.toString(rdr.readArg()));
 			break;
-		case CLEAR:
+		case CONTAINS_KEY_VALUE_CMD:
+			out.write(
+					ACK_CMD,
+					String.valueOf(server.contains(
+							BytesUtil.toString(rdr.readArg()),
+							BytesUtil.toString(rdr.readArg()))));
+			break;
+		case ADD_CMD:
+			server.add(BytesUtil.toString(rdr.readArg()),
+					BytesUtil.toString(rdr.readArg()));
+			break;
+		case ISEMPTY_CMD:
+			out.write(ACK_CMD, String.valueOf(server.isEmpty()));
+			break;
+		case CLEAR_CMD:
 			server.clear();
 			break;
-		case SIZE:
-			out.write(server.size() + "\n");
+		case SIZE_CMD:
+			out.write(ACK_CMD, String.valueOf(server.size()));
 			break;
-		case GET_ALL:
+		case GET_ALL_CMD:
 			// synchronize on server instance (this), have a thread to push out
 			// all the values
-			out.write(server.size() + "\n");
-			String key;
+			out.prepStreamingWrite(ACK_CMD, server.size());
+			String[] kv = new String[2];
 			for (Entry<String, CSet> entry : server) {
-				key = entry.getKey();
+				kv[0] = entry.getKey();
 				for (String value : entry.getValue()) {
-					out.write(key + "\t" + value + "\n");
+					kv[1] = value;
+					out.streamingWrite(kv);
 				}
 			}
 			break;
-		default:
-			printHelpMessage(tokens);
-		}
-	}
-
-	private void processTwoArgs(int cmd, String[] tokens) throws IOException {
-		switch (cmd) {
-		case CONTAINS_KEY:
-			out.write(server.contains(tokens[1]) + "\n");
+		case CONTAINS_KEY_CMD:
+			out.write(ACK_CMD, String.valueOf(server.contains(BytesUtil
+					.toString(rdr.readArg()))));
 			break;
-		case REMOVE_KEY:
-			server.remove(tokens[1]);
+		case REMOVE_KEY_CMD:
+			server.remove(BytesUtil.toString(rdr.readArg()));
 			break;
-		case GET:
-			CSet set = server.get(tokens[1]);
+		case GET_CMD:
+			CSet set = server.get(BytesUtil.toString(rdr.readArg()));
 			if (set != null) {
-				out.write(set.size() + "\n");
+				out.prepStreamingWrite(ACK_CMD, set.size());
 				for (String value : set) {
-					out.write(value + "\n");
+					out.streamingWrite(value);
 				}
 			} else {
-				out.write("0\n");
+				out.prepStreamingWrite(ACK_CMD, 0);
 			}
 
+			out.endStreamingWrite();
+
 			break;
 		default:
-			printHelpMessage(tokens);
-			break;
+			printHelpMessage(cmd, numArgs, rdr);
 		}
-	}
-
-	private void processThreeArgs(int cmd, String[] tokens) throws IOException {
-		switch (cmd) {
-		case REMOVE_KEY_VALUE:
-			server.remove(tokens[1], tokens[2]);
-			break;
-		case CONTAINS_KEY_VALUE:
-			out.write(server.contains(tokens[1], tokens[2]) + "\n");
-			break;
-		case ADD:
-			server.add(tokens[1], tokens[2]);
-			break;
-		default:
-			printHelpMessage(tokens);
-			break;
-		}
-	}
-
-	private void printHelpMessage(String[] tokens) throws IOException {
-		String errmsg = "";
-
-		for (int i = 0; i < tokens.length; ++i) {
-			errmsg += tokens[i] + " ";
-		}
-
-		LOG.error("Received unknown message: " + errmsg);
-		out.write(HELP_MESSAGE + "\n");
 	}
 }

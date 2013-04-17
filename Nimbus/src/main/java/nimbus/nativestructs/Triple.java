@@ -2,53 +2,52 @@ package nimbus.nativestructs;
 
 public class Triple {
 
-	private String first = null;
-	private String second = null;
-	private String third = null;
+	private static final String TAB = "\t";
+	private String[] array = new String[3];
 
 	public Triple() {
 	}
 
 	public Triple(String first, String second, String third) {
-		this.first = first;
-		this.second = second;
-		this.third = third;
+		setFirst(first);
+		setSecond(second);
+		setThird(third);
 	}
 
 	public String getFirst() {
-		return first;
+		return array[0];
 	}
 
 	public void setFirst(String first) {
-		this.first = first;
+		array[0] = first;
 	}
 
 	public String getSecond() {
-		return second;
+		return array[1];
 	}
 
 	public void setSecond(String second) {
-		this.second = second;
+		array[1] = second;
 	}
 
 	public String getThird() {
-		return third;
+		return array[2];
 	}
 
 	public void setThird(String third) {
-		this.third = third;
+		array[2] = third;
 	}
 
 	public void set(Triple t) {
-		first = t.getFirst();
-		second = t.getSecond();
-		third = t.getThird();
+		setFirst(t.getFirst());
+		setSecond(t.getSecond());
+		setThird(t.getThird());
 	}
 
 	public void set(String f, String s, String t) {
-		first = f;
-		second = s;
-		third = t;
+		setFirst(f);
+		setSecond(s);
+		setThird(t);
 	}
 
 	@Override
@@ -63,6 +62,10 @@ public class Triple {
 
 	@Override
 	public String toString() {
-		return (getFirst() + getSecond() + getThird());
+		return array[0] + TAB + array[1] + TAB + array[2];
+	}
+
+	public String[] getTripleArray() {
+		return array;
 	}
 }

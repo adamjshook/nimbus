@@ -2,87 +2,65 @@ package nimbus.server;
 
 import java.io.IOException;
 
+import nimbus.utils.BytesUtil;
+import nimbus.utils.NimbusInputStream;
+
 import org.apache.log4j.Logger;
 
 public class StaticSetCacheletWorker extends ICacheletWorker {
 
-	private static final Logger LOG = Logger.getLogger(StaticSetCacheletWorker.class);
+	@SuppressWarnings("unused")
+	private static final Logger LOG = Logger
+			.getLogger(StaticSetCacheletWorker.class);
 
 	/**
 	 * The CONTAINS command will determine if a given element is a member of
 	 * this Cachelet's set.
 	 */
-	public static final int CONTAINS = 1;
+	public static final int CONTAINS_CMD = 1;
 
 	/**
 	 * The ISEMPTY command will return a value based on if this Cachelet is
 	 * empty or not.
 	 */
-	public static final int ISEMPTY = 2;
+	public static final int ISEMPTY_CMD = 2;
 
 	/**
 	 * The GET command will stream all values back to the user
 	 */
-	public static final int GET = 3;
+	public static final int GET_CMD = 3;
+
+	public static final int ACK_CMD = 4;
 
 	private StaticSetCacheletServer server = null;
-	private static final String HELP_MESSAGE = "Invalid input.";
 
 	public StaticSetCacheletWorker(StaticSetCacheletServer server) {
 		this.server = server;
 	}
 
 	@Override
-	public void processMessage(String theInput) throws IOException {
-		String[] tokens = theInput.split("\\s");
-		int cmd = Integer.parseInt(tokens[0]);
-
-		if (tokens.length == 2) {
-			processTwoArgs(cmd, tokens);
-		} else if (tokens.length == 1) {
-			processOneArg(cmd, tokens);
-		} else {
-			printHelpMessage(tokens);
-		}
-
-		out.flush();
-	}
-
-	private void processOneArg(int cmd, String[] tokens) throws IOException {
+	protected void processMessage(int cmd, long numArgs, NimbusInputStream in)
+			throws IOException {
+	
 		switch (cmd) {
-		case ISEMPTY:
-			out.write(server.isEmpty() + "\n");
+		case ISEMPTY_CMD:
+			out.write(ACK_CMD, String.valueOf(server.isEmpty()));
 			break;
-		case GET:
-			out.write(server.size() + "\n");
+		case GET_CMD:
+			out.prepStreamingWrite(ACK_CMD, server.size());
 			for (String key : server) {
-				out.write(key + "\n");
+				out.streamingWrite(BytesUtil.toBytes(key));
 			}
+			out.endStreamingWrite();
+
+			break;
+		case CONTAINS_CMD:
+			out.write(ACK_CMD,
+					String.valueOf(server.contains(BytesUtil.toString(in.readArg()))));
 			break;
 		default:
-			printHelpMessage(tokens);
-		}
-	}
-
-	private void processTwoArgs(int cmd, String[] tokens) throws IOException {
-		switch (cmd) {
-		case CONTAINS:
-			out.write(server.contains(tokens[1]) + "\n");
-			break;
-		default:
-			printHelpMessage(tokens);
+			printHelpMessage(cmd, numArgs, in);
 			break;
 		}
-	}
-
-	private void printHelpMessage(String[] tokens) throws IOException {
-		String errmsg = "";
-
-		for (int i = 0; i < tokens.length; ++i) {
-			errmsg += tokens[i] + " ";
-		}
-
-		LOG.error("Received unknown message: " + errmsg);
-		out.write(HELP_MESSAGE + "\n");
 	}
 }

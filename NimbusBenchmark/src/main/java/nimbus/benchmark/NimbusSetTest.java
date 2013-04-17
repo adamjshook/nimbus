@@ -26,9 +26,9 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import nimbus.client.CacheletsUnavailableException;
 import nimbus.client.StaticSetClient;
-import nimbus.client.MasterClient;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheExistsException;
+import nimbus.master.NimbusMaster;
 import nimbus.utils.StaticSetIngestor;
 
 public class NimbusSetTest {
@@ -78,7 +78,7 @@ public class NimbusSetTest {
 		System.out.println(fs.getConf().get("fs.default.name"));
 		System.out.println(fs.getConf().get("mapred.job.tracker"));
 		System.out.print("Connecting to master...");
-		MasterClient master = new MasterClient();
+		NimbusMaster master = NimbusMaster.getInstance();
 		System.out.println(" Connected.");
 		List<FileStatus> statuses = Arrays.asList(fs.listStatus(new Path(
 				args[0])));
@@ -103,11 +103,8 @@ public class NimbusSetTest {
 					analytictime3));
 
 			Thread.sleep(15000);
-			try {
-				master.destroyCache(status.getPath().getName());
-			} catch (IOException e) {
-				// nothing
-			}
+
+			master.destroy(status.getPath().getName());
 		}
 
 		ArrayList<String> list = new ArrayList<String>();

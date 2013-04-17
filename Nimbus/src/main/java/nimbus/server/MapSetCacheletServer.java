@@ -11,7 +11,7 @@ public class MapSetCacheletServer extends ICacheletServer implements
 		Iterable<Entry<String, CSet>> {
 
 	private Map<String, CSet> mapSet = new HashMap<String, CSet>();
-	private int size = 0;
+	private long size = 0;
 
 	@Override
 	protected ICacheletWorker getNewWorker() {
@@ -86,7 +86,7 @@ public class MapSetCacheletServer extends ICacheletServer implements
 		return mapSet.isEmpty();
 	}
 
-	public synchronized int size() {
+	public synchronized long size() {
 		return size;
 	}
 

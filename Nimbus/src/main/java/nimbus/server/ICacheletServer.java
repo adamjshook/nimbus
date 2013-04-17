@@ -9,7 +9,6 @@ import nimbus.nativestructs.CSet;
 
 import org.apache.log4j.Logger;
 
-
 /**
  * A Cachelet opens up a server on the given port and creates an appropriate
  * {@link IProtocol} based on the given {@link CacheType}. <br>
@@ -37,8 +36,8 @@ public abstract class ICacheletServer implements Runnable {
 	/**
 	 * Initializes a new instance of the {@link ICacheletServer} class. <br>
 	 * <br>
-	 * Does not actually create the server until {@link ICacheletServer#run()} is
-	 * called.
+	 * Does not actually create the server until {@link ICacheletServer#run()}
+	 * is called.
 	 * 
 	 * @param port
 	 *            The port to create the server on.
@@ -52,7 +51,7 @@ public abstract class ICacheletServer implements Runnable {
 		this.cacheName = cacheName;
 		this.cacheletName = cacheletName;
 	}
-	
+
 	protected abstract ICacheletWorker getNewWorker();
 
 	/**
@@ -79,9 +78,9 @@ public abstract class ICacheletServer implements Runnable {
 			ICacheletWorker w = null;
 			try {
 				w = getNewWorker();
-				w.initialize(cacheName, cacheletName, type, serverSocket
-						.accept());
-				
+				w.initialize(this, cacheName, cacheletName, type,
+						serverSocket.accept());
+
 				Thread t = new Thread(w);
 				t.start();
 				LOG.info("Started a new worker");
@@ -90,5 +89,9 @@ public abstract class ICacheletServer implements Runnable {
 				System.exit(1);
 			}
 		}
+	}
+
+	public void shutdown() {
+		System.exit(0);
 	}
 }

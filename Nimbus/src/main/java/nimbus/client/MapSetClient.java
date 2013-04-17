@@ -25,7 +25,7 @@ public class MapSetClient implements Iterable<Entry<String, String>> {
 	private HashSet<Integer> contains_set = new HashSet<Integer>();
 	private ICacheletHash cacheletHash = ICacheletHash.getInstance();
 	private int replication;
-	private MapSetCacheletConnection contains_connect_tmp;
+	private MapSetCacheletConnection tempConnection;
 
 	public MapSetClient(String cacheName) throws CacheDoesNotExistException,
 			IOException {
@@ -49,8 +49,8 @@ public class MapSetClient implements Iterable<Entry<String, String>> {
 				replication);
 
 		for (Integer cacheletID : contains_set) {
-			contains_connect_tmp = list.get(cacheletID);
-			contains_connect_tmp.add(key, value);
+			tempConnection = list.get(cacheletID);
+			tempConnection.add(key, value);
 		}
 	}
 
@@ -146,8 +146,13 @@ public class MapSetClient implements Iterable<Entry<String, String>> {
 	 */
 	public void disconnect() {
 		for (MapSetCacheletConnection worker : list.values()) {
-			worker.disconnect();
+			try {
+				worker.disconnect();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
+		tempConnection = null;
 	}
 
 	public int size() throws IOException {

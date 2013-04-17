@@ -17,7 +17,7 @@ public class MurmurCacheletHash extends ICacheletHash {
 	public void getCacheletsFromKey(String key, Set<Integer> set,
 			int numCachelets, int replication) {
 
-		int hash = Math.abs(hash(key.getBytes())) % numCachelets;
+		int hash = Math.abs(hash(BytesUtil.toBytes(key))) % numCachelets;
 		for (int i = 0; i < replication; ++i) {
 			set.add(hash);
 			hash = (hash + 1) % numCachelets;

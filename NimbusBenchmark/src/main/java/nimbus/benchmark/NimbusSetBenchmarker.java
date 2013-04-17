@@ -187,6 +187,7 @@ public class NimbusSetBenchmarker extends Configured {
 
 		DynamicSetClient client = new DynamicSetClient(cacheName);
 
+		LOG.info("Beginning scan");
 		int i = 0;
 		for (@SuppressWarnings("unused")
 		String entry : client) {

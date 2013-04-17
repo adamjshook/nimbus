@@ -15,7 +15,6 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 
 import nimbus.client.BaseNimbusClient;
-import nimbus.client.MasterClient;
 import nimbus.server.CacheType;
 import nimbus.utils.BigBitArray;
 
@@ -36,6 +35,8 @@ import nimbus.utils.BigBitArray;
  */
 public class NimbusMaster implements ISafetyNetListener {
 
+	public static final int KILL_CMD = 0;
+	
 	private static final Logger LOG = Logger.getLogger(NimbusMaster.class);
 	private List<Integer> ports = new ArrayList<Integer>();
 	private static NimbusMaster s_instance;
@@ -311,7 +312,7 @@ public class NimbusMaster implements ISafetyNetListener {
 				LOG.info("Killing Cache " + name + " on machine " + host);
 				BaseNimbusClient client = new BaseNimbusClient(host, port);
 				client.connect();
-				client.writeLine("kill");
+				client.write(NimbusMaster.KILL_CMD);
 				client.disconnect();
 			}
 			return true;

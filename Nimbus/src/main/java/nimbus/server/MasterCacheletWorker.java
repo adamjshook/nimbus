@@ -5,64 +5,44 @@ import java.io.IOException;
 import org.apache.log4j.Logger;
 
 import nimbus.master.NimbusMaster;
+import nimbus.utils.BytesUtil;
+import nimbus.utils.NimbusInputStream;
 
 public class MasterCacheletWorker extends ICacheletWorker {
 
 	private final Logger LOG = Logger.getLogger(MasterCacheletWorker.class);
 
-	public static final String DESTROYCMD = "k";
-	public static final String CREATECMD = "c";
-
-	private static final String HELP_MESSAGE = "Invalid input";
+	public static final int DESTROY_CMD = 1;
+	public static final int CREATE_CMD = 2;
+	public static final int ACK_CMD = 3;
 
 	@Override
-	public void processMessage(String theInput) throws IOException {
+	public void processMessage(int cmd, long numArgs, NimbusInputStream rdr)
+			throws IOException {
 
-		LOG.debug("Received command: " + theInput);
-
-		String[] tokens = theInput.split("\\s");
-
-		if (tokens.length == 3) {
-			processThreeArgs(tokens);
-		} else if (tokens.length == 2) {
-			processTwoArgs(tokens);
-		} else {
-			printHelpMessage(tokens);
-		}
-
-		out.flush();
-	}
-
-	private void processThreeArgs(String[] tokens) throws IOException {
-		if (tokens[0].equals(CREATECMD)) {
+		switch (cmd) {
+		case CREATE_CMD:
 			try {
-				NimbusMaster.getInstance().create(tokens[1], CacheType.valueOf(tokens[2]
-						.toUpperCase()));
-				out.write("true\n");
+
+				NimbusMaster.getInstance().create(
+						BytesUtil.toString(rdr.readArg()),
+						CacheType.valueOf(BytesUtil.toString(rdr.readArg())
+								.toUpperCase()));
+				out.write(ACK_CMD, BytesUtil.TRUE_BYTES);
 			} catch (IOException e) {
 				LOG.error(e.getMessage());
-				out.write("false\n");
+				out.write(ACK_CMD, BytesUtil.FALSE_BYTES);
 			}
-		} else {
-			printHelpMessage(tokens);
+			break;
+		case DESTROY_CMD:
+			out.write(
+					ACK_CMD,
+					String.valueOf(NimbusMaster.getInstance().destroy(
+							BytesUtil.toString(rdr.readArg()))));
+			break;
+		default:
+			printHelpMessage(cmd, numArgs, rdr);
+			break;
 		}
-	}
-
-	private void processTwoArgs(String[] tokens) throws IOException {
-		if (tokens[0].equals(DESTROYCMD)) {
-			out.write(NimbusMaster.getInstance().destroy(tokens[1]) + "\n");
-		} else {
-			printHelpMessage(tokens);
-		}
-	}
-
-	private void printHelpMessage(String[] tokens) throws IOException {
-		String errmsg = "";
-		for (int i = 0; i < tokens.length; ++i) {
-			errmsg += tokens[i] + " ";
-		}
-
-		LOG.error("Received unknown message:" + errmsg);
-		out.write(HELP_MESSAGE + "\n");
 	}
 }

@@ -1,6 +1,5 @@
 package nimbus.main;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.security.InvalidParameterException;
 import java.util.HashMap;
@@ -22,7 +21,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
 import nimbus.client.BaseNimbusClient;
-import nimbus.client.MasterClient;
 import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
 import nimbus.master.NimbusSafetyNet;
@@ -33,6 +31,7 @@ import nimbus.server.MapSetCacheletServer;
 import nimbus.server.StaticSetCacheletServer;
 import nimbus.server.MasterCacheletServer;
 import nimbus.utils.BigBitArray;
+import nimbus.utils.BytesUtil;
 import nimbus.utils.NimbusException;
 import nimbus.zk.ZooKeeperAssistant;
 
@@ -55,7 +54,6 @@ public class Nimbus extends Configured implements Tool {
 	private static final Logger LOG = Logger.getLogger(Nimbus.class);
 	private static CacheInfo info = null;
 	private static Random rndm = new Random();
-	private static final byte[] EMPTY_DATA = "".getBytes();
 	private static ZooKeeperAssistant s_zk = null;
 
 	private static String cacheName;
@@ -77,18 +75,12 @@ public class Nimbus extends Configured implements Tool {
 		if (line.hasOption("start")) {
 			startCache();
 		} else if (line.hasOption("kill")) {
-			killCache(line.getOptionValue("kill"));
+			NimbusMaster.getInstance().destroy(line.getOptionValue("kill"));
 		} else {
 			throw new InvalidParameterException("Unknown mode to run in.");
 		}
 
 		return 0;
-	}
-
-	private void killCache(String name) throws IOException {
-
-		MasterClient master = new MasterClient();
-		master.destroyCache(name);
 	}
 
 	private void startCache() throws Exception {
@@ -156,10 +148,10 @@ public class Nimbus extends Configured implements Tool {
 		// communication to that Cachelet and wait for more connections
 		LOG.info("Starting heartbeat cycle...");
 		long hbInterval = NimbusConf.getConf().getCacheletHeartbeatInterval();
-		getZooKeeper().setDataVariable(CACHELET_ZNODE, EMPTY_DATA);
+		getZooKeeper().setDataVariable(CACHELET_ZNODE, BytesUtil.EMPTY_BYTES);
 		while (!false) {
 			Thread.sleep(hbInterval);
-			getZooKeeper().setDataVariable(CACHELET_ZNODE, EMPTY_DATA);
+			getZooKeeper().setDataVariable(CACHELET_ZNODE, BytesUtil.EMPTY_BYTES);
 		}
 	}
 

@@ -2,114 +2,92 @@ package nimbus.server;
 
 import java.io.IOException;
 
+import nimbus.utils.BytesUtil;
+import nimbus.utils.NimbusInputStream;
+
 import org.apache.log4j.Logger;
 
 public class DynamicSetCacheletWorker extends ICacheletWorker {
 
+	@SuppressWarnings("unused")
 	private static final Logger LOG = Logger
 			.getLogger(DynamicSetCacheletWorker.class);
 
-	public static final int ADD = 1;
-	public static final int ADD_ALL = 2;
-	public static final int CLEAR = 3;
+	public static final int ADD_CMD = 1;
+	public static final int ADD_ALL_CMD = 2;
+	public static final int CLEAR_CMD = 3;
 
 	/**
 	 * The CONTAINS command will determine if a given element is a member of
 	 * this Cachelet's set.
 	 */
-	public static final int CONTAINS = 4;
+	public static final int CONTAINS_CMD = 4;
 
 	/**
 	 * The ISEMPTY command will return a value based on if this Cachelet is
 	 * empty or not.
 	 */
-	public static final int ISEMPTY = 5;
+	public static final int ISEMPTY_CMD = 5;
 
 	/**
 	 * The GET command will stream all values back to the user
 	 */
-	public static final int GET = 6;
+	public static final int GET_CMD = 6;
 
-	public static final int REMOVE = 7;
-	public static final int RETAIN_ALL = 8;
-	public static final int SIZE = 9;
+	public static final int REMOVE_CMD = 7;
+	public static final int RETAIN_ALL_CMD = 8;
+	public static final int SIZE_CMD = 9;
+	public static final int ACK_CMD = 10;
 
 	private DynamicSetCacheletServer server = null;
-	private static final String HELP_MESSAGE = "Invalid input.";
 
 	public DynamicSetCacheletWorker(DynamicSetCacheletServer server) {
 		this.server = server;
 	}
 
 	@Override
-	public void processMessage(String theInput) throws IOException {
-		String[] tokens = theInput.split("\\s");
-		int cmd = Integer.parseInt(tokens[0]);
+	public void processMessage(int cmd, long numArgs, NimbusInputStream rdr)
+			throws IOException {
 
-		if (tokens.length == 2) {
-			processTwoArgs(cmd, tokens);
-		} else if (tokens.length == 1) {
-			processOneArg(cmd, tokens);
-		} else {
-			printHelpMessage(tokens);
-		}
-
-		out.flush();
-	}
-
-	private void processOneArg(int cmd, String[] tokens) throws IOException {
 		switch (cmd) {
-		case ISEMPTY:
-			out.write(server.isEmpty() + "\n");
+		case ISEMPTY_CMD:
+			out.write(ACK_CMD, String.valueOf(server.isEmpty()));
 			break;
-		case GET:
-			out.write(server.size() + "\n");
+		case GET_CMD:
+			out.prepStreamingWrite(ACK_CMD, server.size());
+
 			for (String key : server) {
-				out.write(key + "\n");
+				out.streamingWrite(key);
 			}
+
+			out.endStreamingWrite();
+
 			break;
-		case SIZE:
-			out.write(server.size() + "\n");
+		case SIZE_CMD:
+			out.write(ACK_CMD, String.valueOf(server.size()));
 			break;
-		case CLEAR:
+		case CLEAR_CMD:
 			server.clear();
 			break;
-		default:
-			printHelpMessage(tokens);
-		}
-	}
-
-	private void processTwoArgs(int cmd, String[] tokens) throws IOException {
-		switch (cmd) {
-		case CONTAINS:
-			out.write(server.contains(tokens[1]) + "\n");
+		case CONTAINS_CMD:
+			out.write(ACK_CMD,
+					String.valueOf(server.contains(BytesUtil.toString(rdr.readArg()))));
 			break;
-		case ADD:
-			out.write(server.add(tokens[1]) + "\n");
+		case ADD_CMD:
+			out.write(ACK_CMD,
+					String.valueOf(server.add(BytesUtil.toString(rdr.readArg()))));
 			break;
-		case ADD_ALL:
-			int numEntries = Integer.parseInt(tokens[1]);
-			for (int i = 0; i < numEntries; ++i) {
-				server.add(readLine());
+		case ADD_ALL_CMD:
+			for (int i = 0; i < numArgs; ++i) {
+				server.add(BytesUtil.toString(rdr.readArg()));
 			}
 			break;
-		case REMOVE:
-			out.write(server.remove(tokens[1]) + "\n");
+		case REMOVE_CMD:
+			out.write(ACK_CMD,
+					String.valueOf(server.remove(BytesUtil.toString(rdr.readArg()))));
 			break;
 		default:
-			printHelpMessage(tokens);
-			break;
+			printHelpMessage(cmd, numArgs, rdr);
 		}
-	}
-
-	private void printHelpMessage(String[] tokens) throws IOException {
-		String errmsg = "";
-
-		for (int i = 0; i < tokens.length; ++i) {
-			errmsg += tokens[i] + " ";
-		}
-
-		LOG.error("Received unknown message: " + errmsg);
-		out.write(HELP_MESSAGE + "\n");
 	}
 }

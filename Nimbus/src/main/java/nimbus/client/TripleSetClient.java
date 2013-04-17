@@ -11,7 +11,6 @@ import nimbus.main.NimbusConf;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
-import nimbus.server.TripleSetCacheletWorker;
 import nimbus.utils.BigBitArray;
 import nimbus.utils.ICacheletHash;
 import nimbus.utils.DataZNodeWatcher;
@@ -20,10 +19,9 @@ import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
 import nimbus.nativestructs.Triple;
 
-public class NimbusTripleSetClient {
+public class TripleSetClient {
 
-	private static final Logger LOG = Logger
-			.getLogger(NimbusTripleSetClient.class);
+	private static final Logger LOG = Logger.getLogger(TripleSetClient.class);
 
 	private HashMap<Integer, TripleSetCacheletConnection> list = new HashMap<Integer, TripleSetCacheletConnection>();
 	private int numServers = -1;
@@ -46,8 +44,8 @@ public class NimbusTripleSetClient {
 	 * @throws IOException
 	 *             If the Bloom filters do not exist.
 	 */
-	public NimbusTripleSetClient(String cacheName)
-			throws CacheDoesNotExistException, IOException {
+	public TripleSetClient(String cacheName) throws CacheDoesNotExistException,
+			IOException {
 		this.cacheName = cacheName;
 		this.replication = NimbusConf.getConf().getReplicationFactor();
 		String[] cachelets = NimbusConf.getConf().getNimbusCacheletAddresses()
@@ -163,7 +161,12 @@ public class NimbusTripleSetClient {
 					LOG.error("Received error from Cachelet ID " + cacheletID
 							+ ": " + e.getMessage());
 					LOG.error("Disconnecting.");
-					tempConnection.disconnect();
+					try {
+						tempConnection.disconnect();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+
 					availabilityArray.set(cacheletID, false);
 					if (++contains_numdown == replication) {
 						throw new CacheletsUnavailableException();
@@ -259,7 +262,11 @@ public class NimbusTripleSetClient {
 					LOG.error("Received error from Cachelet ID " + cacheletID
 							+ ": " + e.getMessage());
 					LOG.error("Disconnecting.");
-					tempConnection.disconnect();
+					try {
+						tempConnection.disconnect();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
 					availabilityArray.set(cacheletID, false);
 					if (++contains_numdown == replication) {
 						throw new CacheletsUnavailableException();
@@ -317,8 +324,13 @@ public class NimbusTripleSetClient {
 	 */
 	public void disconnect() {
 		for (TripleSetCacheletConnection worker : list.values()) {
-			worker.disconnect();
+			try {
+				worker.disconnect();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 		}
+		tempConnection = null;
 	}
 
 	private void checkWatch() {
@@ -341,110 +353,6 @@ public class NimbusTripleSetClient {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-		}
-	}
-
-	/**
-	 * Helper class to handle connections to each Cachelet. Used by the
-	 * TripleSetClient to... well... connect to each Cachelet.
-	 */
-	private class TripleSetCacheletConnection extends BaseNimbusClient {
-
-		/*
-		 * private final Logger LOG = Logger
-		 * .getLogger(TripleSetCacheletConnection.class); private String
-		 * cacheletName;
-		 */
-
-		/**
-		 * Connects to the given host. Automatically gets the port from the
-		 * Master based on the given Cache name.
-		 * 
-		 * @param cacheName
-		 *            The Cache to connect to.
-		 * @param cacheletName
-		 *            The host of the Cachelet.
-		 * @throws CacheDoesNotExistException
-		 *             If the Cache does not exist.
-		 * @throws IOException
-		 *             If some bad juju happens.
-		 */
-		public TripleSetCacheletConnection(String cacheName, String cacheletName)
-				throws CacheDoesNotExistException, IOException {
-			super(cacheletName, NimbusMaster.getInstance().getCachePort(
-					cacheName));
-			super.cacheName = cacheName;
-			// this.cacheletName = cacheletName;
-			connect();
-		}
-
-		/**
-		 * Sends a request to the Cachelet to add the given element
-		 * 
-		 * @param element
-		 *            The element to add.
-		 * @return If the element was added.
-		 * @throws IOException
-		 */
-		public boolean add(Triple element) throws IOException {
-			writeLine(TripleSetCacheletWorker.ADD + " " + element.toString());
-			String response = readLine();
-			if (response.equals("true")) {
-				return true;
-			} else if (response.equals("false")) {
-				return false;
-			}
-
-			throw new IOException("Did not receive a true or false response.");
-		}
-
-		public void getAll() throws IOException {
-			writeLine(Integer.toString(TripleSetCacheletWorker.GET_ALL));
-		}
-
-		public void get(String s1) throws IOException {
-			writeLine(TripleSetCacheletWorker.GET_WITH_ONE + " " + s1);
-		}
-
-		public void get(String s1, String s2) throws IOException {
-			writeLine(TripleSetCacheletWorker.GET_WITH_TWO + " " + s1 + " "
-					+ s2);
-		}
-
-		/**
-		 * Sends a request to the Cachelet to determine if the given element is
-		 * a member of the set.
-		 * 
-		 * @param element
-		 *            The element to request.
-		 * @return If the element is a member of the set.
-		 * @throws IOException
-		 */
-		public boolean contains(Triple element) throws IOException {
-			writeLine(TripleSetCacheletWorker.CONTAINS + " "
-					+ element.toString());
-			String response = readLine();
-			if (response.equals("true")) {
-				return true;
-			} else if (response.equals("false")) {
-				return false;
-			}
-
-			throw new IOException("Did not receive a true or false response.");
-		}
-
-		/**
-		 * Sends a request to the Cachelet to determine if this Cachelet has any
-		 * elements.
-		 * 
-		 * @return If the Cachelet is empty.
-		 * @throws IOException
-		 *             If an error occurs when sending the request.
-		 */
-		public boolean isEmpty() throws IOException {
-			writeLine(Integer.toString(TripleSetCacheletWorker.ISEMPTY));
-			String response = readLine();
-			return Boolean.parseBoolean(response);
 		}
 	}
 }

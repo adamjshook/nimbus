@@ -18,9 +18,9 @@ import org.junit.Test;
 
 import nimbus.client.CacheletsUnavailableException;
 import nimbus.client.StaticSetClient;
-import nimbus.client.MasterClient;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheExistsException;
+import nimbus.master.NimbusMaster;
 import nimbus.utils.StaticSetIngestor;
 
 import junit.framework.TestSuite;
@@ -63,8 +63,8 @@ public class IngestorTestSuite extends TestSuite {
 		Thread.sleep(5000);
 		client = new StaticSetClient(CACHE_NAME);
 
-		BufferedReader rdr = new BufferedReader(new InputStreamReader(fs
-				.open(dest)));
+		BufferedReader rdr = new BufferedReader(new InputStreamReader(
+				fs.open(dest)));
 
 		String testline;
 		HashSet<String> set = new HashSet<String>();
@@ -107,13 +107,11 @@ public class IngestorTestSuite extends TestSuite {
 
 	@After
 	public void cleanup() throws IOException {
-		MasterClient master = new MasterClient();
+		NimbusMaster master = NimbusMaster.getInstance();
 
 		if (master.exists(CACHE_NAME)) {
-			master.destroyCache(CACHE_NAME);
+			master.destroy(CACHE_NAME);
 		}
-
-		master.disconnect();
 	}
 
 	/**

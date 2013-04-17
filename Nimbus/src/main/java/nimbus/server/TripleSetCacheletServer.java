@@ -157,4 +157,16 @@ public class TripleSetCacheletServer extends ICacheletServer {
 			}
 		}
 	}
+	
+	public long size() {
+		return set.size();
+	}
+	
+	public long sizeOf(String s1) {
+		return set.sizeOf(s1);
+	}
+	
+	public long sizeOf(String s1, String s2) {
+		return set.sizeOf(s1, s2);
+	}
 }

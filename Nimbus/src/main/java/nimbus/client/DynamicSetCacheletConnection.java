@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 
+import org.apache.log4j.Logger;
+
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.NimbusMaster;
 import nimbus.server.DynamicSetCacheletWorker;
+import nimbus.utils.BytesUtil;
 
 public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 		Iterable<String> {
@@ -23,56 +26,158 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 	}
 
 	public boolean add(String element) throws IOException {
-		writeLine(DynamicSetCacheletWorker.ADD + " " + element);
-		return Boolean.parseBoolean(readLine());
+
+		super.write(DynamicSetCacheletWorker.ADD_CMD, element);
+
+		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+			throw new IOException("Did not receive ACK_CMD");
+		}
+
+		super.in.readNumArgs();
+
+		String response = BytesUtil.toString(super.in.readArg());
+
+		in.verifyEndOfMessage();
+
+		if (response.equals("true")) {
+			return true;
+		} else if (response.equals("false")) {
+			return false;
+		} else {
+			throw new IOException("Did not receive a true or false response.");
+		}
 	}
 
-	public void addAll(Collection<? extends String> value)
-			throws IOException {
-		writeLine(DynamicSetCacheletWorker.ADD_ALL + " " + value.size());
-		writeLines(value);
+	public void addAll(Collection<? extends String> value) throws IOException {
+		super.write(DynamicSetCacheletWorker.ADD_ALL_CMD, value);
 	}
 
 	public void clear() throws IOException {
-		writeLine(DynamicSetCacheletWorker.CLEAR);
+		super.write(DynamicSetCacheletWorker.CLEAR_CMD);
 	}
 
 	public boolean contains(String element) throws IOException,
 			CacheletNotConnectedException {
-		writeLine(DynamicSetCacheletWorker.CONTAINS + " " + element);
-		return Boolean.parseBoolean(readLine());
+		super.write(DynamicSetCacheletWorker.CONTAINS_CMD, element);
+
+		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+			throw new IOException("Did not receive ACK_CMD");
+		}
+
+		super.in.readNumArgs();
+
+		String response = BytesUtil.toString(super.in.readArg());
+
+		in.verifyEndOfMessage();
+
+		if (response.equals("true")) {
+			return true;
+		} else if (response.equals("false")) {
+			return false;
+		} else {
+			throw new IOException("Did not receive a true or false response.");
+		}
 	}
 
 	public boolean isEmpty() throws IOException {
-		writeLine(DynamicSetCacheletWorker.ISEMPTY);
-		return Boolean.parseBoolean(readLine());
+		super.write(DynamicSetCacheletWorker.ISEMPTY_CMD);
+
+		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+			throw new IOException("Did not receive ACK_CMD");
+		}
+
+		super.in.readNumArgs();
+
+		String response = BytesUtil.toString(super.in.readArg());
+
+		in.verifyEndOfMessage();
+
+		if (response.equals("true")) {
+			return true;
+		} else if (response.equals("false")) {
+			return false;
+		} else {
+			throw new IOException("Did not receive a true or false response.");
+		}
 	}
 
 	public boolean remove(String element) throws IOException {
-		writeLine(DynamicSetCacheletWorker.REMOVE + " " + element);
-		return Boolean.parseBoolean(readLine());
+		super.write(DynamicSetCacheletWorker.REMOVE_CMD, element);
+
+		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+			throw new IOException("Did not receive ACK_CMD");
+		}
+
+		super.in.readNumArgs();
+
+		String response = BytesUtil.toString(super.in.readArg());
+
+		in.verifyEndOfMessage();
+
+		if (response.equals("true")) {
+			return true;
+		} else if (response.equals("false")) {
+			return false;
+		} else {
+			throw new IOException("Did not receive a true or false response.");
+		}
 	}
 
-	public boolean retainAll(Collection<String> c) throws IOException {
-		writeLine(DynamicSetCacheletWorker.RETAIN_ALL + " " + c.size());
-		writeLines(c);
-		return Boolean.parseBoolean(readLine());
+	public boolean retainAll(Collection<? extends String> c) throws IOException {
+		super.write(DynamicSetCacheletWorker.RETAIN_ALL_CMD, c);
+
+		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+			throw new IOException("Did not receive ACK_CMD");
+		}
+
+		super.in.readNumArgs();
+
+		String response = BytesUtil.toString(super.in.readArg());
+
+		in.verifyEndOfMessage();
+
+		if (response.equals("true")) {
+			return true;
+		} else if (response.equals("false")) {
+			return false;
+		} else {
+
+			throw new IOException("Did not receive a true or false response.");
+		}
 	}
 
 	public int size() throws IOException {
-		writeLine(DynamicSetCacheletWorker.SIZE);
-		return Integer.parseInt(readLine());
+		super.write(DynamicSetCacheletWorker.SIZE_CMD);
+
+		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+			throw new IOException("Did not receive ACK_CMD");
+		}
+
+		super.in.readNumArgs();
+
+		int retval = Integer.valueOf(BytesUtil.toString(super.in.readArg()));
+
+		in.verifyEndOfMessage();
+		return retval;
 	}
 
 	public class DynamicSetCacheletIterator implements Iterator<String> {
 
-		private int numEntries = 0;
-		private int entriesRead = 0;
+		private long numEntries = 0, entriesRead = 0;
+		private final Logger LOG = Logger
+				.getLogger(DynamicSetCacheletIterator.class);
 
 		public DynamicSetCacheletIterator() {
 			try {
-				writeLine(Integer.toString(DynamicSetCacheletWorker.GET));
-				numEntries = Integer.parseInt(readLine());
+				LOG.info("Writing get command");
+				write(DynamicSetCacheletWorker.GET_CMD);
+				LOG.info("Waiting for ACK");
+				if (in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+					throw new IOException("Did not receive ACK_CMD");
+				}
+
+				numEntries = in.readNumArgs();
+				LOG.info("Need to read " + numEntries);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
@@ -80,6 +185,14 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 
 		@Override
 		public boolean hasNext() {
+			if (entriesRead == numEntries) {
+				try {
+					in.verifyEndOfMessage();
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new RuntimeException(e);
+				}
+			}
 			return entriesRead < numEntries;
 		}
 
@@ -87,10 +200,10 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 		public String next() {
 			++entriesRead;
 			try {
-				return readLine();
+				return BytesUtil.toString(in.readArg());
 			} catch (IOException e) {
 				e.printStackTrace();
-				return null;
+				throw new RuntimeException(e);
 			}
 		}
 

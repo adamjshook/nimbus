@@ -17,6 +17,7 @@ import nimbus.server.StaticSetCacheletServer;
 import nimbus.server.StaticSetCacheletWorker;
 import nimbus.utils.BigBitArray;
 import nimbus.utils.BloomFilter;
+import nimbus.utils.BytesUtil;
 import nimbus.utils.DataZNodeWatcher;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheInfo;
@@ -38,7 +39,7 @@ public class StaticSetClient implements Iterable<String> {
 	private int contains_numdown = 0;
 	private String cacheName = null;
 	private int replication;
-	private StaticSetCacheletConnection contains_connect_tmp;
+	private StaticSetCacheletConnection tempConnection;
 
 	/**
 	 * Initializes a connection to a Nimbus distributed set. Downloads the Bloom
@@ -210,10 +211,10 @@ public class StaticSetClient implements Iterable<String> {
 		contains_numdown = 0;
 		for (Integer cacheletID : contains_set) {
 			if (availabilityArray.isBitOn(cacheletID)) {
-				contains_connect_tmp = list.get(cacheletID);
+				tempConnection = list.get(cacheletID);
 				try {
 					if (filters.get(cacheletID).membershipTest(element)) {
-						if (contains_connect_tmp.contains(element)) {
+						if (tempConnection.contains(element)) {
 							return true;
 						}
 					}
@@ -221,9 +222,8 @@ public class StaticSetClient implements Iterable<String> {
 					try {
 						LOG.info("Caught CacheletNotConnectedException for ID "
 								+ cacheletID + ".  Attempting reconnect...");
-						contains_connect_tmp.connect();
-						filters.put(cacheletID,
-								contains_connect_tmp.getBloomFilter());
+						tempConnection.connect();
+						filters.put(cacheletID, tempConnection.getBloomFilter());
 						LOG.info("Successfully reconnected to ID " + cacheletID);
 						if (++contains_numdown == replication) {
 							throw new CacheletsUnavailableException();
@@ -238,7 +238,13 @@ public class StaticSetClient implements Iterable<String> {
 					LOG.error("Received error from Cachelet ID " + cacheletID
 							+ ": " + e.getMessage());
 					LOG.error("Disconnecting.");
-					contains_connect_tmp.disconnect();
+
+					try {
+						tempConnection.disconnect();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+
 					availabilityArray.set(cacheletID, false);
 					if (++contains_numdown == replication) {
 						throw new CacheletsUnavailableException();
@@ -297,8 +303,13 @@ public class StaticSetClient implements Iterable<String> {
 	 */
 	public void disconnect() {
 		for (StaticSetCacheletConnection worker : list.values()) {
-			worker.disconnect();
+			try {
+				worker.disconnect();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
+		tempConnection = null;
 	}
 
 	/**
@@ -403,8 +414,16 @@ public class StaticSetClient implements Iterable<String> {
 		 * @throws IOException
 		 */
 		public boolean contains(String element) throws IOException {
-			writeLine(StaticSetCacheletWorker.CONTAINS + " " + element);
-			String response = readLine();
+
+			super.write(StaticSetCacheletWorker.CONTAINS_CMD, element);
+
+			if (super.in.readCmd() != StaticSetCacheletWorker.ACK_CMD) {
+				throw new IOException("Did not receive ACK_CMD");
+			}
+
+			super.in.readNumArgs();
+
+			String response = BytesUtil.toString(super.in.readArg());
 			if (response.equals("true")) {
 				return true;
 			} else if (response.equals("false")) {
@@ -423,9 +442,22 @@ public class StaticSetClient implements Iterable<String> {
 		 *             If an error occurs when sending the request.
 		 */
 		public boolean isEmpty() throws IOException {
-			writeLine(Integer.toString(StaticSetCacheletWorker.ISEMPTY));
-			String response = readLine();
-			return Boolean.parseBoolean(response);
+			super.write(StaticSetCacheletWorker.ISEMPTY_CMD);
+
+			if (super.in.readCmd() != StaticSetCacheletWorker.ACK_CMD) {
+				throw new IOException("Did not receive ACK_CMD");
+			}
+
+			super.in.readNumArgs();
+
+			String response = BytesUtil.toString(super.in.readArg());
+			if (response.equals("true")) {
+				return true;
+			} else if (response.equals("false")) {
+				return false;
+			}
+
+			throw new IOException("Did not receive a true or false response.");
 		}
 
 		/**
@@ -450,13 +482,17 @@ public class StaticSetClient implements Iterable<String> {
 
 		private class NimbusSetCacheletIterator implements Iterator<String> {
 
-			private int numEntries = 0;
-			private int entriesRead = 0;
+			private long numEntries = 0,  entriesRead = 0;
 
 			public NimbusSetCacheletIterator() {
 				try {
-					writeLine(Integer.toString(StaticSetCacheletWorker.GET));
-					numEntries = Integer.parseInt(readLine());
+					write(StaticSetCacheletWorker.GET_CMD);
+
+					if (in.readCmd() != StaticSetCacheletWorker.ACK_CMD) {
+						throw new IOException("Did not receive ACK_CMD");
+					}
+
+					numEntries = in.readNumArgs();
 				} catch (Exception e) {
 					throw new RuntimeException(e);
 				}
@@ -469,12 +505,16 @@ public class StaticSetClient implements Iterable<String> {
 
 			@Override
 			public String next() {
-				++entriesRead;
-				try {
-					return readLine();
-				} catch (IOException e) {
-					e.printStackTrace();
+				if (entriesRead >= numEntries) {
 					return null;
+				} else {
+					++entriesRead;
+					try {
+						return BytesUtil.toString(in.readArg());
+					} catch (IOException e) {
+						e.printStackTrace();
+						return null;
+					}
 				}
 			}
 

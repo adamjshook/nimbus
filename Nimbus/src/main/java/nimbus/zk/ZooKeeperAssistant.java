@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import nimbus.main.NimbusConf;
+import nimbus.utils.BytesUtil;
 import nimbus.utils.ExceptionType;
 import nimbus.utils.NimbusException;
 
@@ -790,7 +791,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 
 	public String getStringVariable(String path, String def) {
 
-		byte[] data = def != null ? getDataVariable(path, def.getBytes())
+		byte[] data = def != null ? getDataVariable(path, BytesUtil.toBytes(def))
 				: getDataVariable(path);
 
 		if (data != null) {
@@ -801,7 +802,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 	}
 
 	public boolean setStringVariable(String path, String str) {
-		return setDataVariable(path, str.getBytes());
+		return setDataVariable(path, BytesUtil.toBytes(str));
 	}
 
 	public synchronized List<String> getChildren(String path) {

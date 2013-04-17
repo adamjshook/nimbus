@@ -91,8 +91,13 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 	 */
 	public void disconnect() {
 		for (DynamicSetCacheletConnection worker : list.values()) {
-			worker.disconnect();
+			try {
+				worker.disconnect();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
+		tempConnectionSet = null;
 	}
 
 	public boolean addNow(String element) throws CacheletNotConnectedException {
@@ -151,6 +156,8 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		for (String s : c) {
 			add(s);
 		}
+
+		flush();
 	}
 
 	public void flush() throws CacheletNotConnectedException {
@@ -161,11 +168,13 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 				numEntries += entry.getValue().size();
 			}
 
-			LOG.info("Flushing " + numEntries + " elements...");
+			LOG.info("Flushing " + numEntries + " total elements...");
 			for (Entry<Integer, Set<String>> entry : bufferedElements
 					.entrySet()) {
 				contains_connect_tmp = list.get(entry.getKey());
 				try {
+					LOG.info("Flushing " + entry.getValue().size()
+							+ " elements to " + entry.getKey());
 					contains_connect_tmp.addAll(entry.getValue());
 				} catch (IOException e) {
 					try {

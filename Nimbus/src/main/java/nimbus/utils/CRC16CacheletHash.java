@@ -64,7 +64,7 @@ public class CRC16CacheletHash extends ICacheletHash {
 
 	private static int crc16(int input) {
 		cr = 0x0000;
-		for (byte b : Integer.toString(input).getBytes()) {
+		for (byte b : BytesUtil.toBytes(Integer.toString(input))) {
 			cr = (cr >>> 8) ^ table[(cr ^ b) & 0xff];
 		}
 
@@ -73,7 +73,7 @@ public class CRC16CacheletHash extends ICacheletHash {
 
 	private static int crc16(String input) {
 		cr = 0x0000;
-		for (byte b : input.getBytes()) {
+		for (byte b : BytesUtil.toBytes(input)) {
 			cr = (cr >>> 8) ^ table[(cr ^ b) & 0xff];
 		}
 

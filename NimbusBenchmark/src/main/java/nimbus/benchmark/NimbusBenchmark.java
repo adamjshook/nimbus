@@ -14,7 +14,7 @@ public class NimbusBenchmark extends Configured implements Tool {
 	public static String makeNimbusSafe(String str) {
 		String tmp = str.replaceAll("\\s", "");
 		while (tmp.length() < 100) {
-			tmp += "A";
+			tmp += 'A';
 		}
 		return tmp;
 	}

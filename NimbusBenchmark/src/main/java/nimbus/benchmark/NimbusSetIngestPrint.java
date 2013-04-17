@@ -3,7 +3,6 @@ package nimbus.benchmark;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -12,9 +11,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import nimbus.client.StaticSetClient;
-import nimbus.client.MasterClient;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheExistsException;
+import nimbus.master.NimbusMaster;
 import nimbus.utils.StaticSetIngestor;
 
 public class NimbusSetIngestPrint {
@@ -32,10 +31,9 @@ public class NimbusSetIngestPrint {
 		}
 
 		fs = FileSystem.get(new Configuration());
-		Path outputDir = new Path(args[1]);
 
 		System.out.print("Connecting to master...");
-		MasterClient master = new MasterClient();
+		NimbusMaster master = NimbusMaster.getInstance();
 
 		List<FileStatus> statuses = Arrays.asList(fs.listStatus(new Path(
 				args[0])));
@@ -58,7 +56,8 @@ public class NimbusSetIngestPrint {
 				StaticSetClient client = new StaticSetClient(p.getName());
 				int numRecords = 0;
 
-				for (String s : client) {
+				for (@SuppressWarnings("unused")
+				String s : client) {
 					++numRecords;
 				}
 
@@ -83,11 +82,7 @@ public class NimbusSetIngestPrint {
 						+ (endTime - startTime) + " ms.");
 			}
 
-			try {
-				master.destroyCache(status.getPath().getName());
-			} catch (IOException e) {
-				// nothing
-			}
+			master.destroy(status.getPath().getName());
 		}
 	}
 

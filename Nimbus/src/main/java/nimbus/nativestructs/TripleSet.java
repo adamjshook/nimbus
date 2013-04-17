@@ -201,7 +201,7 @@ public class TripleSet {
 	}
 
 	public boolean add(String[] split) {
-		return add(split[0], split[1], split[2]);		
+		return add(split[0], split[1], split[2]);
 	}
 
 	public boolean add(Triple t) {
@@ -259,6 +259,32 @@ public class TripleSet {
 
 	public long size() {
 		return size;
+	}
+
+	public long sizeOf(String s1) {
+
+		long sum = 0;
+		Map<String, Set<String>> map = triples.get(s1);
+		if (map != null) {
+			for (Entry<String, Set<String>> entry : map.entrySet()) {
+				sum += entry.getValue().size();
+			}
+		}
+
+		return sum;
+	}
+
+	public long sizeOf(String s1, String s2) {
+		long sum = 0;
+		Map<String, Set<String>> map = triples.get(s1);
+		if (map != null) {
+			Set<String> set = map.get(s2);
+			if (set != null) {
+				sum = set.size();
+			}
+		}
+
+		return sum;
 	}
 
 	public void clear() {

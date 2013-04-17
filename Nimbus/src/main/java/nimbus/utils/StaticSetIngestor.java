@@ -11,10 +11,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
 import nimbus.client.StaticSetClient;
-import nimbus.client.MasterClient;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.CacheExistsException;
 import nimbus.master.FailedToCreateCacheException;
+import nimbus.master.NimbusMaster;
 import nimbus.server.CacheType;
 
 /**
@@ -90,30 +90,26 @@ public class StaticSetIngestor {
 			throw new IOException("Path " + file + " is not a file.");
 		}
 		try {
-			MasterClient master = new MasterClient();
+			NimbusMaster master = NimbusMaster.getInstance();
 			if (destroy) {
 				if (master.exists(cacheName)) {
 					if (destroy) {
-						master.destroyCache(cacheName);
+						master.destroy(cacheName);
 					} else {
 						throw new CacheExistsException(cacheName);
 					}
 				} else {
-					master.createCache(cacheName, CacheType.STATIC_SET);
-					
+					master.create(cacheName, CacheType.STATIC_SET);
+
 					while (!master.exists(cacheName)) {
 						LOG.info("Cache does not exist yet... Sleeping");
 						Thread.sleep(1000);
 					}
 				}
-
-				master.disconnect();
 			}
 			Thread.sleep(1000);
-			StaticSetClient set = new StaticSetClient(cacheName,
-					false);
-			set.read(file, approxNumRecords, falsePositiveRate,
-					false);
+			StaticSetClient set = new StaticSetClient(cacheName, false);
+			set.read(file, approxNumRecords, falsePositiveRate, false);
 			set.disconnect();
 		} catch (FailedToCreateCacheException e) {
 			e.printStackTrace();

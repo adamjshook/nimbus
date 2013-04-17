@@ -21,7 +21,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableOutputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
@@ -532,8 +531,6 @@ public class NimbusMapSetTest extends Configured implements Tool {
 
 		HTable table = new HTable(HBaseConfiguration.create(),
 				"twitter-mentions");
-
-		Scan scan = new Scan();
 
 		ResultScanner scanner = table.getScanner(new Scan());
 
