@@ -11,6 +11,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -19,6 +20,7 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.log4j.Logger;
 
 import nimbus.client.DynamicSetClient;
+import nimbus.mapreduce.DynamicSetPartitioner;
 import nimbus.mapreduce.lib.input.DynamicSetInputFormat;
 import nimbus.mapreduce.lib.output.DynamicSetOutputFormat;
 import nimbus.master.CacheDoesNotExistException;
@@ -37,15 +39,16 @@ public class NimbusSetBenchmarker extends Configured {
 	}
 
 	public static class NimbusIngestMapper extends
-			Mapper<LongWritable, Text, Text, Text> {
+			Mapper<LongWritable, Text, Text, NullWritable> {
 
 		private Text outkey = new Text();
+		private NullWritable outvalue = NullWritable.get();
 
 		@Override
 		protected void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			outkey.set(NimbusBenchmark.makeNimbusSafe(value.toString()));
-			context.write(outkey, null);
+			context.write(outkey, outvalue);
 		}
 	}
 
@@ -265,11 +268,14 @@ public class NimbusSetBenchmarker extends Configured {
 		job.setJarByClass(getClass());
 
 		job.setMapperClass(NimbusIngestMapper.class);
-		job.setNumReduceTasks(0);
+		job.setPartitionerClass(DynamicSetPartitioner.class);
 
 		TextInputFormat.setInputPaths(job, input);
 		job.setOutputFormatClass(DynamicSetOutputFormat.class);
 		DynamicSetOutputFormat.setCacheName(job, cacheName);
+
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(NullWritable.class);
 
 		job.waitForCompletion(true);
 		long finish = System.currentTimeMillis();
