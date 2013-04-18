@@ -113,7 +113,7 @@ public class BaseNimbusClient implements Runnable {
 					}
 				} else {
 					throw new IOException(
-							"Failed to connect to host too many times.");
+							"Failed to connect to " + host + " too many times.");
 				}
 			}
 		}

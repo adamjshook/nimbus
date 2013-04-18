@@ -75,6 +75,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 	}
 
 	private void connect() {
+		connected = false;
 		LOG.info("Connecting to ZooKeeper...");
 		try {
 			keeper = new ZooKeeper(conf.getZooKeeperServers(),
@@ -94,6 +95,7 @@ public class ZooKeeperAssistant implements ConnectListener {
 
 	private boolean reconnect(KeeperException ex) {
 		if (ex.code().equals(Code.CONNECTIONLOSS)) {
+			connected = false;
 			LOG.info("Connection lost. Reconnecting to ZooKeeper.");
 			try {
 				keeper = new ZooKeeper(conf.getZooKeeperServers(),
@@ -791,8 +793,8 @@ public class ZooKeeperAssistant implements ConnectListener {
 
 	public String getStringVariable(String path, String def) {
 
-		byte[] data = def != null ? getDataVariable(path, BytesUtil.toBytes(def))
-				: getDataVariable(path);
+		byte[] data = def != null ? getDataVariable(path,
+				BytesUtil.toBytes(def)) : getDataVariable(path);
 
 		if (data != null) {
 			return new String(data);

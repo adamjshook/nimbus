@@ -47,7 +47,7 @@ public class DynamicSetCacheletServer extends ICacheletServer implements
 		super(cacheName, cacheletName, port, type);
 	}
 
-	public boolean add(String element) {
+	public synchronized boolean add(String element) {
 		return set.add(element);
 	}
 
