@@ -1,8 +1,19 @@
 package nimbus.mapreduce.lib.output;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryType;
+import java.util.HashSet;
+import java.util.Set;
 
-import nimbus.client.DynamicSetClient;
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
+
+import nimbus.client.DynamicSetCacheletConnection;
+import nimbus.main.NimbusConf;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.NimbusMaster;
 import nimbus.server.CacheType;
@@ -58,6 +69,9 @@ public class DynamicSetOutputFormat extends OutputFormat<Text, Object> {
 			throw new IOException(NIMBUS_DYNAMIC_SET_OUTPUT_FORMAT_CREATE_CACHE
 					+ " is false and cache does not exist");
 		}
+
+		context.getConfiguration().setInt("mapred.reduce.tasks",
+				NimbusConf.getConf().getNumNimbusCachelets());
 	}
 
 	@Override
@@ -70,34 +84,90 @@ public class DynamicSetOutputFormat extends OutputFormat<Text, Object> {
 	public RecordWriter<Text, Object> getRecordWriter(TaskAttemptContext context)
 			throws IOException, InterruptedException {
 		return new NimbusDynamicSetRecordWriter(context.getConfiguration().get(
-				NIMBUS_DYNAMIC_SET_OUTPUT_FORMAT_CACHE_NAME));
+				NIMBUS_DYNAMIC_SET_OUTPUT_FORMAT_CACHE_NAME), context);
 	}
 
 	public static class NimbusDynamicSetRecordWriter extends
-			RecordWriter<Text, Object> {
+			RecordWriter<Text, Object> implements NotificationListener {
 
-		private DynamicSetClient client = null;
+		private DynamicSetCacheletConnection client = null;
+		private Set<String> bufferedElements = new HashSet<String>();
+		Boolean flush = false;
 
-		public NimbusDynamicSetRecordWriter(String cacheName)
-				throws IOException {
+		public NimbusDynamicSetRecordWriter(String cacheName,
+				TaskAttemptContext context) throws IOException {
+
+			int id = context.getTaskAttemptID().getTaskID().getId();
 			try {
-				client = new DynamicSetClient(cacheName);
+				String[] addresses = NimbusConf.getConf()
+						.getNimbusCacheletAddresses().split(",");
+
+				client = new DynamicSetCacheletConnection(cacheName,
+						addresses[id]);
 			} catch (CacheDoesNotExistException e) {
 				e.printStackTrace();
 				throw new IOException(e);
 			}
+
+			// heuristic to find the tenured pool (largest heap) as seen on
+			// http://www.javaspecialists.eu/archive/Issue092.html
+			MemoryPoolMXBean tenuredGenPool = null;
+			for (MemoryPoolMXBean pool : ManagementFactory
+					.getMemoryPoolMXBeans()) {
+				if (pool.getType() == MemoryType.HEAP
+						&& pool.isUsageThresholdSupported()) {
+					tenuredGenPool = pool;
+				}
+			}
+
+			// we do something when we reached 80% of memory usage
+			tenuredGenPool.setCollectionUsageThreshold((int) Math
+					.floor(tenuredGenPool.getUsage().getMax() * 0.8));
+
+			// set a listener
+			MemoryMXBean mbean = ManagementFactory.getMemoryMXBean();
+			NotificationEmitter emitter = (NotificationEmitter) mbean;
+			emitter.addNotificationListener(this, null, null);
 		}
 
 		@Override
 		public void close(TaskAttemptContext context) throws IOException,
 				InterruptedException {
+			flush();
 			client.disconnect();
 		}
 
 		@Override
 		public void write(Text key, Object value) throws IOException,
 				InterruptedException {
-			client.add(key.toString());
+
+			synchronized (bufferedElements) {
+				bufferedElements.add(key.toString());
+			}
+
+			synchronized (flush) {
+				if (flush) {
+					flush();
+					flush = false;
+				}
+			}
+		}
+
+		@Override
+		public void handleNotification(Notification notification,
+				Object handback) {
+			synchronized (flush) {
+				flush = true;
+			}
+		}
+
+		private void flush() throws IOException, InterruptedException {
+
+			synchronized (bufferedElements) {
+				client.addAll(bufferedElements);
+				bufferedElements.clear();
+				System.gc();
+			}
 		}
 	}
 }
