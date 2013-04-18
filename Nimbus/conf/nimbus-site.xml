@@ -27,4 +27,8 @@
     <name>zk.session.timeout</name>
     <value>2147483640</value>
   </property>
+<property>
+    <name>nimbus.safety.net.enabled</name>
+    <value>false</value>
+  </property>
 </configuration>

@@ -142,16 +142,26 @@ public class Nimbus extends Configured implements Tool {
 		// add myself to ZooKeeper
 		LOG.info("Creating my ZNode at " + CACHELET_ZNODE);
 		getZooKeeper().ensurePaths(CACHELET_ZNODE);
-
-		// this while loop manages connections to other Cachelets
-		// if a Cachelet connects, then create a new thread to handle
-		// communication to that Cachelet and wait for more connections
-		LOG.info("Starting heartbeat cycle...");
-		long hbInterval = NimbusConf.getConf().getCacheletHeartbeatInterval();
-		getZooKeeper().setDataVariable(CACHELET_ZNODE, BytesUtil.EMPTY_BYTES);
-		while (!false) {
-			Thread.sleep(hbInterval);
-			getZooKeeper().setDataVariable(CACHELET_ZNODE, BytesUtil.EMPTY_BYTES);
+		
+		if (NimbusConf.getConf().isSafetyNetEnabled()) {
+			// this while loop manages connections to other Cachelets
+			// if a Cachelet connects, then create a new thread to handle
+			// communication to that Cachelet and wait for more connections
+			LOG.info("Starting heartbeat cycle...");
+			long hbInterval = NimbusConf.getConf()
+					.getCacheletHeartbeatInterval();
+			getZooKeeper().setDataVariable(CACHELET_ZNODE,
+					BytesUtil.EMPTY_BYTES);
+			while (!false) {
+				Thread.sleep(hbInterval);
+				getZooKeeper().setDataVariable(CACHELET_ZNODE,
+						BytesUtil.EMPTY_BYTES);
+			}
+		} else {
+			LOG.info("Safety net is disabled... simply sleeping this thread.");
+			while (!false) {
+				Thread.sleep(Integer.MAX_VALUE);
+			}
 		}
 	}
 
