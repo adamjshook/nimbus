@@ -36,15 +36,15 @@ public class NimbusBenchmark extends Configured implements Tool {
 		FileStatus[] files = FileSystem.get(getConf()).listStatus(input);
 
 		for (FileStatus status : files) {
-			LOG.info("Processing file " + status);
+			LOG.info("Processing file " + status.getPath());
 			if (type.equalsIgnoreCase("nimbus")) {
 				NimbusSetBenchmarker benchmarker = new NimbusSetBenchmarker();
 				benchmarker.setConf(getConf());
-				return benchmarker.run(input, cacheName);
+				benchmarker.run(status.getPath(), cacheName + "-" + status.getPath().getName());
 			} else if (type.equalsIgnoreCase("hbase")) {
 				HBaseBenchmarker benchmarker = new HBaseBenchmarker();
 				benchmarker.setConf(getConf());
-				return benchmarker.run(input, cacheName);
+				benchmarker.run(status.getPath(), cacheName + "-" + status.getPath().getName());
 			} else {
 				LOG.error("Unknown type " + type);
 				return 1;

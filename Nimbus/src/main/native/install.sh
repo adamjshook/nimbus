@@ -1,6 +1,6 @@
 #!/bin/bash
 
-JAVA_HOME="/usr/lib/jvm/java-1.6.0-openjdk"
+JAVA_HOME=/usr/java/jdk1.6.0_43
 
 rm *.o
 
@@ -20,8 +20,8 @@ fi
 
 ldconfig -v -n .
 
-mkdir -p ../bin/native
-cp libNativeNimbus.so ../bin/native
+mkdir -p ../../../bin/native
+cp libNativeNimbus.so ../../../bin/native
 
 echo "Install complete"
 exit 0

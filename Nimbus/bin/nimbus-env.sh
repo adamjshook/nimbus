@@ -1,19 +1,19 @@
 #!/bin/bash
 
-export NIMBUS_HOME=/home/mrdp/nimbus-git/Nimbus
+export NIMBUS_HOME=/home/ajshook/nimbus/Nimbus
 
 # REQUIRED: This is the path to where your Hadoop installation is.
-export HADOOP_HOME=/usr/local/hadoop
+export HADOOP_HOME=/home/ajshook/hadoop/hadoop-current
 # TODO
 
 # REQUIRED: This is the path to where your Java installation is.
-JAVA_HOME=/usr/lib/jvm/java-1.6.0-openjdk
+JAVA_HOME=/usr/java/jdk1.6.0_43/
 # TODO
 
 CONFIG_FILE=${NIMBUS_HOME}/conf/nimbus-default.xml
 # TODO
 #LOG_DIR={$NIMBUS_HOME}/logs
-LOG_DIR=/data/nimbus/logs
+LOG_DIR=${NIMBUS_HOME}/logs
 HOSTLIST=${NIMBUS_HOME}/conf/servers
 NIMBUS_JAR_FILE="$( ls ${NIMBUS_HOME}/bin/nimbus*.jar )"
 NIMBUS_MAIN_CLASS="nimbus.main.Nimbus"

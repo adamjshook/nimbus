@@ -221,6 +221,8 @@ public class NimbusSetBenchmarker extends Configured {
 
 		job.setOutputFormatClass(NullOutputFormat.class);
 
+		job.getConfiguration().set("mapred.map.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+
 		job.waitForCompletion(true);
 
 		long finish = System.currentTimeMillis();
@@ -248,6 +250,8 @@ public class NimbusSetBenchmarker extends Configured {
 
 		job.setOutputFormatClass(NullOutputFormat.class);
 
+		job.getConfiguration().set("mapred.map.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+
 		job.waitForCompletion(true);
 
 		long finish = System.currentTimeMillis();
@@ -271,7 +275,10 @@ public class NimbusSetBenchmarker extends Configured {
 		job.setOutputFormatClass(DynamicSetOutputFormat.class);
 		DynamicSetOutputFormat.setCacheName(job, cacheName);
 
+		job.getConfiguration().set("mapred.map.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+
 		job.waitForCompletion(true);
+
 		long finish = System.currentTimeMillis();
 		LOG.info("Took " + (finish - start) + " ms for MR ingest.");
 	}
