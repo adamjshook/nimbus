@@ -47,7 +47,7 @@ public class NimbusSetBenchmarker extends Configured {
 		@Override
 		protected void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
-			outkey.set(NimbusBenchmark.makeNimbusSafe(value.toString()));
+			outkey.set(value.toString());
 			context.write(outkey, outvalue);
 		}
 	}
@@ -93,8 +93,8 @@ public class NimbusSetBenchmarker extends Configured {
 
 			if (rndm.nextFloat() < sampleRate) {
 				long start = System.currentTimeMillis();
-				if (!client.contains(NimbusBenchmark.makeNimbusSafe(value
-						.toString()))) {
+				if (!client.contains(value
+						.toString())) {
 					context.getCounter("Records", "Mismatch").increment(1);
 				}
 				long finish = System.currentTimeMillis();
@@ -160,7 +160,7 @@ public class NimbusSetBenchmarker extends Configured {
 
 				int i = 0;
 				while ((s = rdr.readLine()) != null) {
-					client.add(NimbusBenchmark.makeNimbusSafe(s));
+					client.add(s);
 
 					if (++i % 1000000 == 0) {
 						LOG.info("Read " + i + " records");
@@ -225,6 +225,7 @@ public class NimbusSetBenchmarker extends Configured {
 		job.setOutputFormatClass(NullOutputFormat.class);
 
 		job.getConfiguration().set("mapred.map.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+		job.getConfiguration().set("mapred.reduce.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
 
 		job.waitForCompletion(true);
 
@@ -254,6 +255,7 @@ public class NimbusSetBenchmarker extends Configured {
 		job.setOutputFormatClass(NullOutputFormat.class);
 
 		job.getConfiguration().set("mapred.map.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+		job.getConfiguration().set("mapred.reduce.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
 
 		job.waitForCompletion(true);
 
@@ -279,6 +281,8 @@ public class NimbusSetBenchmarker extends Configured {
 		DynamicSetOutputFormat.setCacheName(job, cacheName);
 
 		job.getConfiguration().set("mapred.map.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+		job.getConfiguration().set("mapred.reduce.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(NullWritable.class);
 

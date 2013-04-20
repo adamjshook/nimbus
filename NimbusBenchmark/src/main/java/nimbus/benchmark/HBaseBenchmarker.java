@@ -21,8 +21,12 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
+import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableOutputFormat;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -39,7 +43,7 @@ public class HBaseBenchmarker extends Configured {
 	private static final byte[] EMPTY_BYTES = "".getBytes();
 
 	public static class HBaseScanMapper extends
-			Mapper<ImmutableBytesWritable, Result, Text, Text> {
+			TableMapper<Text, Text> {
 
 		@Override
 		protected void map(ImmutableBytesWritable key, Result value,
@@ -58,7 +62,7 @@ public class HBaseBenchmarker extends Configured {
 		protected void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 
-			outvalue = new Put(NimbusBenchmark.makeNimbusSafe(value.toString())
+			outvalue = new Put(value.toString()
 					.getBytes());
 			outvalue.add(COLUMN_FAMILY, EMPTY_BYTES, EMPTY_BYTES);
 			context.write(outkey, outvalue);
@@ -103,8 +107,7 @@ public class HBaseBenchmarker extends Configured {
 
 			if (rndm.nextFloat() < sampleRate) {
 				long start = System.currentTimeMillis();
-				if (!client.exists(new Get(NimbusBenchmark.makeNimbusSafe(
-						value.toString()).getBytes()))) {
+				if (!client.exists(new Get(value.toString().getBytes()))) {
 					context.getCounter("Records", "Mismatch").increment(1);
 				}
 				long finish = System.currentTimeMillis();
@@ -116,17 +119,20 @@ public class HBaseBenchmarker extends Configured {
 		}
 	}
 
-	public int run(Path input, String tableName) throws Exception {
+	public int run(Path input, String tableName, byte[][] splits)
+			throws Exception {
 
 		setConf(HBaseConfiguration.create(getConf()));
 
-		serialIngest(input, tableName);
+		serialIngest(input, tableName, splits);
 		serialScan(tableName);
 		mapReduceScan(tableName);
 		sampleScan(input, tableName, .0f);
 		sampleScan(input, tableName, .01f);
 		sampleScan(input, tableName, .05f);
 		sampleScan(input, tableName, .10f);
+		sampleScan(input, tableName, .25f);
+		sampleScan(input, tableName, .50f);
 
 		LOG.info("Destroying " + tableName);
 
@@ -137,7 +143,7 @@ public class HBaseBenchmarker extends Configured {
 		LOG.info("Sleeping for 30s");
 		Thread.sleep(30000);
 
-		mapReduceIngest(input, tableName);
+		mapReduceIngest(input, tableName, splits);
 
 		LOG.info("Destroying " + tableName);
 		admin.disableTable(tableName.getBytes());
@@ -145,7 +151,8 @@ public class HBaseBenchmarker extends Configured {
 		return 0;
 	}
 
-	private void serialIngest(Path input, String tableName) throws Exception {
+	private void serialIngest(Path input, String tableName, byte[][] splits)
+			throws Exception {
 
 		LOG.info("Executing serial ingest of data from " + input + " into "
 				+ tableName);
@@ -154,10 +161,7 @@ public class HBaseBenchmarker extends Configured {
 
 		FileSystem fs = FileSystem.get(getConf());
 
-		HBaseAdmin admin = new HBaseAdmin(getConf());
-		HTableDescriptor desc = new HTableDescriptor(tableName.getBytes());
-		desc.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
-		admin.createTable(desc);
+		createTable(tableName, splits);
 
 		FileStatus[] paths = fs.listStatus(input, new PathFilter() {
 			@Override
@@ -180,8 +184,7 @@ public class HBaseBenchmarker extends Configured {
 				Put outvalue = null;
 				int i = 0;
 				while ((s = rdr.readLine()) != null) {
-					outvalue = new Put(NimbusBenchmark.makeNimbusSafe(s)
-							.getBytes());
+					outvalue = new Put(s.getBytes());
 					outvalue.add(COLUMN_FAMILY, EMPTY_BYTES, EMPTY_BYTES);
 
 					table.put(outvalue);
@@ -211,7 +214,11 @@ public class HBaseBenchmarker extends Configured {
 		long start = System.currentTimeMillis();
 
 		HTable table = new HTable(getConf(), tableName.getBytes());
-		ResultScanner scanner = table.getScanner(new Scan());
+		LOG.info("Default scanner caching: " + table.getScannerCaching());
+		Scan scan = new Scan();
+		scan.setCaching(671088);
+		scan.setBatch(Integer.MAX_VALUE);
+		ResultScanner scanner = table.getScanner(scan);
 
 		int i = 0;
 		for (@SuppressWarnings("unused")
@@ -242,9 +249,13 @@ public class HBaseBenchmarker extends Configured {
 		job.setNumReduceTasks(0);
 
 		job.setInputFormatClass(TableInputFormat.class);
-		job.getConfiguration().set(TableInputFormat.INPUT_TABLE, tableName);
-
 		job.setOutputFormatClass(NullOutputFormat.class);
+	
+		Scan scan = new Scan();
+                scan.setCaching(5000);
+                scan.setBatch(Integer.MAX_VALUE);
+
+		TableMapReduceUtil.initTableMapperJob(tableName.getBytes(), scan, HBaseScanMapper.class, Text.class, Text.class, job);
 
 		job.waitForCompletion(true);
 
@@ -281,17 +292,15 @@ public class HBaseBenchmarker extends Configured {
 				+ " at " + sampleRate);
 	}
 
-	private void mapReduceIngest(Path input, String tableName) throws Exception {
+	private void mapReduceIngest(Path input, String tableName, byte[][] splits)
+			throws Exception {
 		LOG.info("Executing MR ingest of data from " + tableName);
 
 		long start = System.currentTimeMillis();
 
-		HBaseAdmin admin = new HBaseAdmin(getConf());
-		HTableDescriptor desc = new HTableDescriptor(tableName.getBytes());
-		desc.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
-		admin.createTable(desc);
+		createTable(tableName, splits);
 
-		Job job = new Job(getConf(), "Nimbus MR Ingest");
+		Job job = new Job(getConf(), "HBase MR Ingest");
 		job.setJarByClass(getClass());
 
 		job.setMapperClass(HBaseIngestMapper.class);
@@ -307,4 +316,20 @@ public class HBaseBenchmarker extends Configured {
 		long finish = System.currentTimeMillis();
 		LOG.info("Took " + (finish - start) + " ms for MR ingest.");
 	}
+
+	private void createTable(String tableName, byte[][] splits)
+			throws IOException {
+		HBaseAdmin admin = new HBaseAdmin(getConf());
+		HTableDescriptor desc = new HTableDescriptor(tableName.getBytes());
+		HColumnDescriptor family = new HColumnDescriptor(COLUMN_FAMILY);
+		family.setBloomFilterType(BloomType.ROW);
+		//family.setBlocksize(16777216);
+		family.setCompactionCompressionType(Algorithm.NONE);
+		//family.setInMemory(true);
+		family.setMaxVersions(1);
+
+		desc.addFamily(family);
+		admin.createTable(desc, splits);
+	}
 }
+
