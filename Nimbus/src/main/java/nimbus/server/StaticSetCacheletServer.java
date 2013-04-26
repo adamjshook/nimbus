@@ -33,11 +33,19 @@ public class StaticSetCacheletServer extends ICacheletServer implements
 				+ cacheletName);
 	}
 
+	public StaticSetCacheletServer(String cacheName, String cacheletName, int port,
+			CacheType type) {
+		super(cacheName, cacheletName, port, type);
+	}
+
 	@Override
 	protected ICacheletWorker getNewWorker() {
 		return new StaticSetCacheletWorker(this);
 	}
-
+	@Override
+	protected void startStatusThread() {
+	}
+	
 	@Override
 	public void run() {
 		openServer();
@@ -55,11 +63,6 @@ public class StaticSetCacheletServer extends ICacheletServer implements
 		}
 
 		acceptConnections();
-	}
-
-	public StaticSetCacheletServer(String cacheName, String cacheletName, int port,
-			CacheType type) {
-		super(cacheName, cacheletName, port, type);
 	}
 
 	public void clear() {

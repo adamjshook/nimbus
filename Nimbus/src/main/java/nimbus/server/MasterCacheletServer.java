@@ -11,4 +11,8 @@ public class MasterCacheletServer extends ICacheletServer {
 	protected ICacheletWorker getNewWorker() {
 		return new MasterCacheletWorker();
 	}
+	
+	@Override
+	protected void startStatusThread() {
+	}
 }

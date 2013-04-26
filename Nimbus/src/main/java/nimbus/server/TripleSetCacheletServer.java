@@ -27,11 +27,20 @@ public class TripleSetCacheletServer extends ICacheletServer {
 	private static final Logger LOG = Logger
 			.getLogger(TripleSetCacheletServer.class);
 
+	public TripleSetCacheletServer(String cacheName, String cacheletName,
+			int port, CacheType type) {
+		super(cacheName, cacheletName, port, type);
+	}
+
 	@Override
 	protected ICacheletWorker getNewWorker() {
 		return new TripleSetCacheletWorker(this);
 	}
-
+	
+	@Override
+	protected void startStatusThread() {
+	}
+	
 	@Override
 	public void run() {
 		openServer();
@@ -47,11 +56,6 @@ public class TripleSetCacheletServer extends ICacheletServer {
 		}
 
 		acceptConnections();
-	}
-
-	public TripleSetCacheletServer(String cacheName, String cacheletName,
-			int port, CacheType type) {
-		super(cacheName, cacheletName, port, type);
 	}
 
 	public void clear() {

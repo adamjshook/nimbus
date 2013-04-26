@@ -17,11 +17,9 @@ public class MapSetCacheletServer extends ICacheletServer implements
 	protected ICacheletWorker getNewWorker() {
 		return new MapSetCacheletWorker(this);
 	}
-
+	
 	@Override
-	public void run() {
-		openServer();
-		acceptConnections();
+	protected void startStatusThread() {
 	}
 
 	public MapSetCacheletServer(String cacheName, String cacheletName,
