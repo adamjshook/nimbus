@@ -71,6 +71,38 @@ JNIEXPORT jstring JNICALL Java_nimbus_nativestructs_CMap_c_1remove
 JNIEXPORT jint JNICALL Java_nimbus_nativestructs_CMap_c_1size
   (JNIEnv *, jobject);
 
+/*
+ * Class:     nimbus_nativestructs_CMap
+ * Method:    c_iterInit
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_nimbus_nativestructs_CMap_c_1iterInit
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     nimbus_nativestructs_CMap
+ * Method:    c_iterHasNext
+ * Signature: (I)Z
+ */
+JNIEXPORT jboolean JNICALL Java_nimbus_nativestructs_CMap_c_1iterHasNext
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     nimbus_nativestructs_CMap
+ * Method:    c_iterNext
+ * Signature: (I)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_nimbus_nativestructs_CMap_c_1iterNext
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     nimbus_nativestructs_CMap
+ * Method:    c_getIterValue
+ * Signature: (I)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_nimbus_nativestructs_CMap_c_1getIterValue
+  (JNIEnv *, jobject, jint);
+
 #ifdef __cplusplus
 }
 #endif

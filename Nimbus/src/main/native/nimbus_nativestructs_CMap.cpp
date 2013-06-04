@@ -20,6 +20,13 @@ std::map<const char*, const char*, ltstr> map;
 typedef std::map<const char*, const char*, ltstr>::iterator mapiter;
 typedef std::map<const char*, const char*, ltstr>::const_iterator mapconstiter;
 
+std::map<int, mapconstiter*> mapIters;
+typedef std::map<int, mapconstiter*>::iterator mapItersiter;
+typedef std::map<int, mapconstiter*>::const_iterator mapItersconstiter;
+
+std::map<int, const char*> currentIterValues;
+typedef std::map<int, const char*>::iterator currentIterValuesIter;
+
 /*
  * Class:     nimbus_nativestructs_CMap
  * Method:    c_clear
@@ -172,4 +179,80 @@ JNIEXPORT jstring JNICALL Java_nimbus_nativestructs_CMap_c_1remove(JNIEnv *env, 
 JNIEXPORT jint JNICALL Java_nimbus_nativestructs_CMap_c_1size(JNIEnv *env, jobject obj)
 {
     return map.size();
+}
+
+/*
+ * Class:     nimbus_nativestructs_CMap
+ * Method:    c_iterInit
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_nimbus_nativestructs_CMap_c_1iterInit(JNIEnv *, jobject)
+{
+	// create a new iterator for this map
+	mapconstiter* pIter = new mapconstiter(map.begin());	
+	mapIters.insert(std::pair<int, mapconstiter*>(mapIters.size(), pIter));
+	return mapIters.size() - 1;
+}
+
+/*
+ * Class:     nimbus_nativestructs_CMap
+ * Method:    c_iterHasNext
+ * Signature: (I)Z
+ */
+JNIEXPORT jboolean JNICALL Java_nimbus_nativestructs_CMap_c_1iterHasNext(JNIEnv *, jobject, jint index)
+{
+	
+	mapItersconstiter iter = mapIters.find(index);
+	if (iter != mapIters.end())
+	{
+		return *(iter->second) != map.end();
+	}
+	else
+	{
+		return false;
+	}
+}
+
+/*
+ * Class:     nimbus_nativestructs_CMap
+ * Method:    c_iterNext
+ * Signature: (I)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_nimbus_nativestructs_CMap_c_1iterNext(JNIEnv *env, jobject, jint index)
+{
+	mapItersconstiter iter = mapIters.find(index);
+
+	if (iter != mapIters.end() && *(iter->second) != map.end())
+	{	
+		jstring retval = JNIUtils::strToJString(env, (*iter->second)->first);
+		currentIterValuesIter valueIter = currentIterValues.find(index);
+		if (valueIter != currentIterValues.end())
+		{
+			currentIterValues.erase(valueIter);
+		}
+
+		currentIterValues.insert(std::pair<int, const char*>(index, (*iter->second)->second));
+		++(*(iter->second));
+		return retval;
+	}
+
+	return 0;	
+}
+
+/*
+ * Class:     nimbus_nativestructs_CMap
+ * Method:    c_getIterValue
+ * Signature: (I)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_nimbus_nativestructs_CMap_c_1getIterValue(JNIEnv *env, jobject, jint index)
+{
+	const char* val = currentIterValues.at(index);
+	if (val != 0)
+	{
+		return JNIUtils::strToJString(env, val);
+	}
+	else
+	{
+		return 0;
+	}
 }

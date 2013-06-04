@@ -11,14 +11,14 @@ public enum CacheType {
 	MASTER,
 
 	/**
-	 * The Static Set is a Cache that evenly distributes a large data set
-	 * over all Cachelets in the Cache based on a static file from HDFS
+	 * The Static Set is a Cache that evenly distributes a large data set over
+	 * all Cachelets in the Cache based on a static file from HDFS
 	 */
 	STATIC_SET,
-	
+
 	/**
-	 * The Dynamic Set is a Cache that evenly distributes a large data set
-	 * over all Cachelets in the Cache.
+	 * The Dynamic Set is a Cache that evenly distributes a large data set over
+	 * all Cachelets in the Cache.
 	 */
 	DYNAMIC_SET,
 
@@ -27,6 +27,8 @@ public enum CacheType {
 	 * over all Cachelets in the Cache
 	 */
 	TRIPLE_STORE,
-	
-	MAPSET
+
+	MAPSET,
+
+	DYNAMIC_MAP
 }

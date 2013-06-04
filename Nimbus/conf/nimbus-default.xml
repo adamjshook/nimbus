@@ -108,6 +108,11 @@
   </property>
 
   <property>
+    <name>write.ahead.log.dir</name>
+    <value>/nimbus/writeaheadlogs</value>
+  </property>
+
+  <property>
     <name>zk.session.timeout</name>
     <value>30000</value>
   </property>

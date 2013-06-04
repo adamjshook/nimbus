@@ -5,6 +5,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collection;
+import java.util.Map;
+import java.util.Map.Entry;
 
 public class NimbusOutputStream extends OutputStream {
 
@@ -12,11 +14,18 @@ public class NimbusOutputStream extends OutputStream {
 	public static final char END_CMD_TOKEN = '%';
 	public static final char ARGS_TOKEN = '&';
 	public static final char BYTES_TOKEN = '$';
-	
+
 	private DataOutputStream strm = null;
+
+	public NimbusOutputStream() {
+	}
 
 	public NimbusOutputStream(OutputStream out) {
 		strm = new DataOutputStream(new BufferedOutputStream(out));
+	}
+	
+	public void setOutputStream(OutputStream out) {
+		strm = new DataOutputStream(new BufferedOutputStream(out));		
 	}
 
 	public void prepStreamingWrite(int cmd, long numArgs) throws IOException {
@@ -77,7 +86,6 @@ public class NimbusOutputStream extends OutputStream {
 
 	public void write(int cmd, Collection<? extends String> args)
 			throws IOException {
-
 		strm.writeChar(CMD_TOKEN);
 		strm.writeInt(cmd);
 
@@ -90,6 +98,32 @@ public class NimbusOutputStream extends OutputStream {
 			strm.writeChar(BYTES_TOKEN);
 			strm.writeInt(bytes.length);
 
+			strm.write(bytes);
+		}
+
+		strm.writeChar(END_CMD_TOKEN);
+		strm.flush();
+	}
+
+	public void write(int cmd, Map<? extends String, ? extends String> values)
+			throws IOException {
+		strm.writeChar(CMD_TOKEN);
+		strm.writeInt(cmd);
+
+		strm.writeChar(ARGS_TOKEN);
+		strm.writeLong(values.size());
+
+		byte[] bytes = null;
+		for (Entry<? extends String, ? extends String> entry : values
+				.entrySet()) {
+			bytes = BytesUtil.toBytes(entry.getKey());
+			strm.writeChar(BYTES_TOKEN);
+			strm.writeInt(bytes.length);
+			strm.write(bytes);
+
+			bytes = BytesUtil.toBytes(entry.getValue());
+			strm.writeChar(BYTES_TOKEN);
+			strm.writeInt(bytes.length);
 			strm.write(bytes);
 		}
 
@@ -127,7 +161,7 @@ public class NimbusOutputStream extends OutputStream {
 		strm.writeChar(END_CMD_TOKEN);
 		strm.flush();
 	}
-	
+
 	@Override
 	public void flush() throws IOException {
 		strm.flush();

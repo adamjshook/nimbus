@@ -3,6 +3,7 @@ package nimbus.benchmark;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Map.Entry;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configured;
@@ -10,8 +11,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -19,35 +20,45 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.log4j.Logger;
 
-import nimbus.client.DynamicSetClient;
+import nimbus.client.DynamicMapClient;
 import nimbus.mapreduce.NimbusHashPartitioner;
-import nimbus.mapreduce.lib.input.DynamicSetInputFormat;
-import nimbus.mapreduce.lib.output.DynamicSetOutputFormat;
+import nimbus.mapreduce.lib.input.DynamicMapInputFormat;
+import nimbus.mapreduce.lib.output.DynamicMapOutputFormat;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.NimbusMaster;
 import nimbus.server.CacheType;
 
-public class NimbusSetBenchmarker extends Configured {
+public class NimbusMapBenchmarker extends Configured {
 
-	public static class NimbusScanMapper extends
-			Mapper<Text, Object, Text, Text> {
+	public static void getKVPair(String s, Pair<String, String> out) {
+		String[] tokens = s.split("\\s", 2);
+		out.setFirst(tokens[0]);
+		out.setSecond(tokens[1]);
+	}
+
+	public static class NimbusMapScanMapper extends
+			Mapper<Text, Text, Text, Text> {
 
 		@Override
-		protected void map(Text key, Object value, Context context)
+		protected void map(Text key, Text value, Context context)
 				throws IOException, InterruptedException {
 		}
 	}
 
-	public static class NimbusIngestMapper extends
-			Mapper<LongWritable, Text, Text, NullWritable> {
+	public static class NimbusMapIngestMapper extends
+			Mapper<LongWritable, Text, Text, Text> {
 
-		private Text outkey = new Text();
-		private NullWritable outvalue = NullWritable.get();
+		private Text outkey = new Text(), outvalue = new Text();
+		private Pair<String, String> pair = new Pair<String, String>();
 
 		@Override
 		protected void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
-			outkey.set(value.toString());
+
+			NimbusMapBenchmarker.getKVPair(value.toString(), pair);
+
+			outkey.set(pair.getFirst());
+			outvalue.set(pair.getSecond());
 			context.write(outkey, outvalue);
 		}
 	}
@@ -70,7 +81,8 @@ public class NimbusSetBenchmarker extends Configured {
 
 		private float sampleRate = 0.0f;
 		private Random rndm = new Random(0);
-		private DynamicSetClient client = null;
+		private DynamicMapClient client = null;
+		private Pair<String, String> pair = new Pair<String, String>();
 
 		protected void setup(Context context) throws IOException,
 				InterruptedException {
@@ -78,7 +90,7 @@ public class NimbusSetBenchmarker extends Configured {
 					NIMBUS_SAMPLE_MAPPER_RATE));
 
 			try {
-				client = new DynamicSetClient(context.getConfiguration().get(
+				client = new DynamicMapClient(context.getConfiguration().get(
 						NIMBUS_SAMPLE_MAPPER_CACHE_NAME));
 			} catch (CacheDoesNotExistException e) {
 
@@ -92,11 +104,14 @@ public class NimbusSetBenchmarker extends Configured {
 				throws IOException, InterruptedException {
 
 			if (rndm.nextFloat() < sampleRate) {
+
+				NimbusMapBenchmarker.getKVPair(value.toString(), pair);
+
 				long start = System.currentTimeMillis();
-				if (!client.contains(value
-						.toString())) {
+				if (!client.get(pair.getFirst()).equals(pair.getSecond())) {
 					context.getCounter("Records", "Mismatch").increment(1);
 				}
+
 				long finish = System.currentTimeMillis();
 
 				context.getCounter("Records", "Queries").increment(1);
@@ -107,19 +122,19 @@ public class NimbusSetBenchmarker extends Configured {
 	}
 
 	private static final Logger LOG = Logger
-			.getLogger(NimbusSetBenchmarker.class);
+			.getLogger(NimbusMapBenchmarker.class);
 
 	public int run(Path input, String cacheName) throws Exception {
 
-		//serialIngest(input, cacheName);
-		serialScan(cacheName);
-		mapReduceScan(cacheName);
-		sampleScan(input, cacheName, .0f);
-		sampleScan(input, cacheName, .01f);
-		sampleScan(input, cacheName, .05f);
-		sampleScan(input, cacheName, .10f);
-		sampleScan(input, cacheName, .25f);
-		sampleScan(input, cacheName, .50f);
+		serialIngest(input, cacheName);
+		//serialScan(cacheName);
+		//mapReduceScan(cacheName);
+		//sampleScan(input, cacheName, .0f);
+		//sampleScan(input, cacheName, .01f);
+		//sampleScan(input, cacheName, .05f);
+		//sampleScan(input, cacheName, .10f);
+		//sampleScan(input, cacheName, .25f);
+		sampleScan(input, cacheName, 2.0f);
 
 		LOG.info("Destroying " + cacheName);
 		NimbusMaster.getInstance().destroy(cacheName);
@@ -142,9 +157,9 @@ public class NimbusSetBenchmarker extends Configured {
 
 		FileSystem fs = FileSystem.get(getConf());
 
-		NimbusMaster.getInstance().create(cacheName, CacheType.DYNAMIC_SET);
+		NimbusMaster.getInstance().create(cacheName, CacheType.DYNAMIC_MAP);
 
-		DynamicSetClient client = new DynamicSetClient(cacheName);
+		DynamicMapClient client = new DynamicMapClient(cacheName);
 		FileStatus[] paths = fs.listStatus(input, new PathFilter() {
 			@Override
 			public boolean accept(Path path) {
@@ -154,6 +169,7 @@ public class NimbusSetBenchmarker extends Configured {
 		});
 
 		String s;
+		Pair<String, String> pair = new Pair<String, String>();
 		for (FileStatus file : paths) {
 			if (!file.isDir()) {
 				LOG.info("Opening " + file.getPath());
@@ -162,7 +178,8 @@ public class NimbusSetBenchmarker extends Configured {
 
 				int i = 0;
 				while ((s = rdr.readLine()) != null) {
-					client.add(s);
+					NimbusMapBenchmarker.getKVPair(s, pair);
+					client.put(pair.getFirst(), pair.getSecond());
 
 					if (++i % 1000000 == 0) {
 						LOG.info("Read " + i + " records");
@@ -190,12 +207,12 @@ public class NimbusSetBenchmarker extends Configured {
 
 		long start = System.currentTimeMillis();
 
-		DynamicSetClient client = new DynamicSetClient(cacheName);
+		DynamicMapClient client = new DynamicMapClient(cacheName);
 
 		LOG.info("Beginning scan");
 		int i = 0;
 		for (@SuppressWarnings("unused")
-		String entry : client) {
+		Entry<String, String> entry : client) {
 			if (++i % 1000000 == 0) {
 				LOG.info("Read " + i + " records");
 			}
@@ -218,16 +235,18 @@ public class NimbusSetBenchmarker extends Configured {
 		Job job = new Job(getConf(), "Nimbus MR Scan");
 		job.setJarByClass(getClass());
 
-		job.setMapperClass(NimbusScanMapper.class);
+		job.setMapperClass(NimbusMapScanMapper.class);
 		job.setNumReduceTasks(0);
 
-		job.setInputFormatClass(DynamicSetInputFormat.class);
-		DynamicSetInputFormat.setCacheName(job, cacheName);
+		job.setInputFormatClass(DynamicMapInputFormat.class);
+		DynamicMapInputFormat.setCacheName(job, cacheName);
 
 		job.setOutputFormatClass(NullOutputFormat.class);
 
-		// job.getConfiguration().set("mapred.map.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
-		// job.getConfiguration().set("mapred.reduce.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+		/*job.getConfiguration().set("mapred.map.child.env",
+				"NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+		job.getConfiguration().set("mapred.reduce.child.env",
+				"NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");*/
 
 		job.waitForCompletion(true);
 
@@ -256,8 +275,10 @@ public class NimbusSetBenchmarker extends Configured {
 
 		job.setOutputFormatClass(NullOutputFormat.class);
 
-		// job.getConfiguration().set("mapred.map.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
-		// job.getConfiguration().set("mapred.reduce.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+		/*job.getConfiguration().set("mapred.map.child.env",
+				"NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+		job.getConfiguration().set("mapred.reduce.child.env",
+				"NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");*/
 
 		job.waitForCompletion(true);
 
@@ -275,18 +296,20 @@ public class NimbusSetBenchmarker extends Configured {
 		Job job = new Job(getConf(), "Nimbus MR Ingest");
 		job.setJarByClass(getClass());
 
-		job.setMapperClass(NimbusIngestMapper.class);
+		job.setMapperClass(NimbusMapIngestMapper.class);
 		job.setPartitionerClass(NimbusHashPartitioner.class);
 
 		TextInputFormat.setInputPaths(job, input);
-		job.setOutputFormatClass(DynamicSetOutputFormat.class);
-		DynamicSetOutputFormat.setCacheName(job, cacheName);
+		job.setOutputFormatClass(DynamicMapOutputFormat.class);
+		DynamicMapOutputFormat.setCacheName(job, cacheName);
 
-		// job.getConfiguration().set("mapred.map.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
-		// job.getConfiguration().set("mapred.reduce.child.env", "NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+		/*job.getConfiguration().set("mapred.map.child.env",
+				"NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");
+		job.getConfiguration().set("mapred.reduce.child.env",
+				"NIMBUS_HOME=/home/ajshook/nimbus/Nimbus");*/
 
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(NullWritable.class);
+		job.setOutputValueClass(Text.class);
 
 		job.waitForCompletion(true);
 

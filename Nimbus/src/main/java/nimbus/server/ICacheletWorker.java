@@ -3,6 +3,7 @@ package nimbus.server;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 
@@ -43,6 +44,10 @@ public abstract class ICacheletWorker implements Runnable {
 		out = new NimbusOutputStream(new DataOutputStream(
 				socket.getOutputStream()));
 		in = new NimbusInputStream(socket.getInputStream());
+	}
+
+	public void setOutputStream(OutputStream outputStream) {
+		this.out = new NimbusOutputStream(outputStream);
 	}
 
 	/**

@@ -1,12 +1,19 @@
 package nimbus.server;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 
+import nimbus.main.NimbusConf;
 import nimbus.nativestructs.CSet;
+import nimbus.utils.NimbusInputStream;
+import nimbus.utils.WriteAheadFile;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils.NullOutputStream;
 import org.apache.log4j.Logger;
 
 /**
@@ -30,6 +37,7 @@ public abstract class ICacheletServer implements Runnable {
 	protected CacheType type = null;
 	protected String cacheName = null;
 	protected String cacheletName = null;
+	private WriteAheadFile waffle = null;
 
 	private ServerSocket serverSocket;
 
@@ -52,15 +60,71 @@ public abstract class ICacheletServer implements Runnable {
 		this.cacheletName = cacheletName;
 	}
 
-	protected abstract ICacheletWorker getNewWorker();
-
 	/**
 	 * Opens up the server and creates a thread for each connection to it.
 	 */
 	@Override
 	public void run() {
 		openServer();
+
+		newWriteAheadFile();
+
+		try {
+			recover();
+			waffle.open();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+			shutdown();
+		}
+
+
+		startStatusThread();
+
 		acceptConnections();
+	}
+
+	protected abstract ICacheletWorker getNewWorker();
+
+	protected abstract void startStatusThread();
+
+	protected void recover() throws IOException {
+
+		Path[] files = NimbusConf.getConf().getPastWriteAheadLogs(cacheName,
+				cacheletName);
+
+		for (Path log : files) {
+			ICacheletWorker worker = getNewWorker();
+
+			worker.setOutputStream(new NullOutputStream());
+
+			LOG.info("Recovering from " + log);
+
+			NimbusInputStream in = new NimbusInputStream(FileSystem.get(
+					NimbusConf.getConf()).open(log));
+
+			waffle.setOutputStream(new NullOutputStream());
+
+			int numCommands = 0, cmd = 0;
+			long numArgs = 0;
+			try {
+				while ((cmd = in.readCmd()) != NimbusInputStream.EOF) {
+					numArgs = in.readNumArgs();
+
+					worker.processMessage(cmd, numArgs, in);
+
+					in.verifyEndOfMessage();
+					++numCommands;
+				}
+			} catch (EOFException e) {
+				in.close();
+				LOG.info("Recovered.  Processed " + numCommands + " commands");
+			} catch (IOException e) {
+				LOG.info("IOException on recover.  Read " + numCommands
+						+ " commands.", e);
+				throw e;
+			}
+		}
 	}
 
 	protected void openServer() {
@@ -91,7 +155,40 @@ public abstract class ICacheletServer implements Runnable {
 		}
 	}
 
+	public WriteAheadFile getWriteAheadFile() {
+		return waffle;
+	}
+
 	public void shutdown() {
+		try {
+			if (waffle != null) {
+				LOG.info("Closing write ahead file");
+				waffle.flush();
+				waffle.close();
+			} else {
+				LOG.info("Write ahead file is null.");
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		LOG.error("Shutting down");
 		System.exit(0);
+	}
+
+	public void newWriteAheadFile() {
+		try {
+
+			if (waffle != null) {
+				LOG.info("Closing write ahead file");
+				waffle.flush();
+				waffle.close();
+			}
+
+			waffle = new WriteAheadFile(NimbusConf.getConf().getWriteAheadLog(
+					cacheName, cacheletName));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

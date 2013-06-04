@@ -16,6 +16,7 @@
 /Nimbus/src/main/native/Debug
 /Nimbus/native/NativeNimbus.*
 /Nimbus/native/libNativeNimbus.so
+/Nimbus/src/main/native/*.o
 /Nimbus/src/main/native/NativeNimbus.sdf
 /Nimbus/src/main/native/NativeNimbus.suo
 /Nimbus/src/main/native/NativeNimbus.v11.suo

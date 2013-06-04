@@ -1,14 +1,16 @@
 package nimbus.nativestructs;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 /**
  * This class is a JNI wrapper for the C++ std::map and is used by Cachelets to
- * store the actual members of a map. While there is some minor overhead using
+ * store the actual members of a map. While there is some minor overhead uming
  * JNI, it removes the JVM memory requirements issues. <br>
  * <br>
  * Note that not all methods are supported due to interop issues. <br>
@@ -17,7 +19,8 @@ import org.apache.log4j.Logger;
  * std::map. Multiple instances of a CMap would all communicate with the same
  * std::map.
  */
-public class CMap implements Map<String, String> {
+public class CMap implements Map<String, String>,
+		Iterable<Entry<String, String>> {
 
 	private static final Logger LOG = Logger.getLogger(CMap.class);
 	private static CMap s_instance = null;
@@ -64,9 +67,11 @@ public class CMap implements Map<String, String> {
 
 	/**
 	 * <b>This method is not supported and throws a RuntimeException</b>
+	 * 
 	 * @throws RuntimeException
 	 */
 	@Override
+	@Deprecated
 	public Set<Entry<String, String>> entrySet() {
 		throw new RuntimeException("Not yet implemented");
 	}
@@ -75,7 +80,7 @@ public class CMap implements Map<String, String> {
 	public String get(Object key) {
 		return c_get(key);
 	}
-	
+
 	private native String c_get(Object key);
 
 	@Override
@@ -87,8 +92,10 @@ public class CMap implements Map<String, String> {
 
 	/**
 	 * <b>This method is not supported and throws a RuntimeException</b>
+	 * 
 	 * @throws RuntimeException
 	 */
+	@Deprecated
 	public Set<String> keySet() {
 		throw new RuntimeException("Not yet implemented");
 	}
@@ -123,10 +130,63 @@ public class CMap implements Map<String, String> {
 
 	/**
 	 * <b>This method is not supported and throws a RuntimeException</b>
+	 * 
 	 * @throws RuntimeException
 	 */
 	@Override
+	@Deprecated
 	public Collection<String> values() {
-		throw new RuntimeException("Not yet implemented");		
+		throw new RuntimeException("Not yet implemented");
+	}
+
+	/**
+	 * <b>This method is not supported and throws a RuntimeException</b>
+	 * 
+	 * @throws RuntimeException
+	 */
+	@Override
+	public Iterator<Entry<String, String>> iterator() {
+		return new CMapIterator(this);
+	}
+
+	private native int c_iterInit();
+
+	private native boolean c_iterHasNext(int index);
+
+	private native String c_iterNext(int index);
+
+	private native String c_getIterValue(int index);
+
+	public static class CMapIterator implements Iterator<Entry<String, String>> {
+
+		private CMap map = null;
+		private int index;
+		private CMapEntry currEntry = new CMapEntry();
+
+		public CMapIterator(CMap map) {
+			this.map = map;
+			index = map.c_iterInit();
+		}
+
+		@Override
+		public boolean hasNext() {
+			return map.c_iterHasNext(index);
+		}
+
+		@Override
+		public Entry<String, String> next() {
+			if (map.c_iterHasNext(index)) {
+				currEntry.setKey(map.c_iterNext(index));
+				currEntry.setValue(map.c_getIterValue(index));
+				return currEntry;
+			} else {
+				return null;
+			}
+		}
+
+		@Override
+		public void remove() {
+			throw new RuntimeException("CMapIterator::remove is not supported");
+		}
 	}
 }

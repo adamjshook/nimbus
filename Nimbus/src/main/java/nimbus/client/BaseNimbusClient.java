@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.util.Collection;
+import java.util.Map;
 
 import nimbus.main.NimbusConf;
 
@@ -112,8 +113,8 @@ public class BaseNimbusClient implements Runnable {
 						e1.printStackTrace();
 					}
 				} else {
-					throw new IOException(
-							"Failed to connect to " + host + " too many times.");
+					throw new IOException("Failed to connect to " + host
+							+ " too many times.");
 				}
 			}
 		}
@@ -189,6 +190,15 @@ public class BaseNimbusClient implements Runnable {
 			throws IOException {
 		if (connected) {
 			out.write(cmd, args);
+		} else {
+			throw new CacheletNotConnectedException(host);
+		}
+	}
+
+	public void write(int cmd, Map<? extends String, ? extends String> values)
+			throws IOException {
+		if (connected) {
+			out.write(cmd, values);
 		} else {
 			throw new CacheletNotConnectedException(host);
 		}

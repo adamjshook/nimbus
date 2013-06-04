@@ -7,7 +7,7 @@ import java.io.InputStream;
 
 public class NimbusInputStream extends InputStream {
 
-	private static final int EOF = -1;
+	public static final int EOF = -1;
 	private DataInputStream strm = null;
 
 	public NimbusInputStream(InputStream in) {

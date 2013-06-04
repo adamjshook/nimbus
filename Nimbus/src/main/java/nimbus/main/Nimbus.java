@@ -24,6 +24,7 @@ import nimbus.client.BaseNimbusClient;
 import nimbus.master.CacheInfo;
 import nimbus.master.NimbusMaster;
 import nimbus.master.NimbusSafetyNet;
+import nimbus.server.DynamicMapCacheletServer;
 import nimbus.server.DynamicSetCacheletServer;
 import nimbus.server.ICacheletServer;
 import nimbus.server.CacheType;
@@ -128,6 +129,11 @@ public class Nimbus extends Configured implements Tool {
 			break;
 		case MAPSET:
 			cachelet = new MapSetCacheletServer(info.getName(), cacheletName,
+					info.getPort(), info.getType());
+			break;
+			
+		case DYNAMIC_MAP:
+			cachelet = new DynamicMapCacheletServer(info.getName(), cacheletName,
 					info.getPort(), info.getType());
 			break;
 		default:

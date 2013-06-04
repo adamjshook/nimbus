@@ -8,7 +8,7 @@ import nimbus.utils.ICacheletHash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Partitioner;
 
-public class DynamicSetPartitioner extends Partitioner<Text, Object> {
+public class NimbusHashPartitioner extends Partitioner<Text, Object> {
 
 	private ICacheletHash hash = ICacheletHash.getInstance();
 	private Set<Integer> set = new HashSet<Integer>();

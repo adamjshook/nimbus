@@ -1,34 +1,17 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
-
   <!-- The nimbus.home property is the home directory where Java is installed. -->
   <!-- Because this is system dependent, there is no default. -->
-  <property>
+  <!-- property>
     <name>java.home</name>
-    <value>/usr/java/jdk1.6.0_43</value>
-  </property>
-
-  <!-- The zookeeper.quorum.servers property is a comma separated list -->
-  <!-- of the servers in a ZooKeeper Quorum. -->
-  <!-- Default value is localhost:2181 -->
-  <property>
-    <name>zookeeper.quorum.servers</name>
-    <value>ip-10-0-0-220:2181,ip-10-0-0-142:2181,ip-10-0-0-143:2181</value>
-  </property>
+    <value></value>
+  </property-->
 
   <!-- The nimbus.home property is the home directory where Nimbus is installed. -->
-  <!-- Default value is /usr/local/nimbus -->
-  <property>
+  <!-- No default value -->
+  <!-- property>
     <name>nimbus.home</name>
-    <value>/home/ajshook/nimbus/Nimbus</value>
-  </property>
-  <property>
-    <name>zk.session.timeout</name>
-    <value>2147483640</value>
-  </property>
-  <property>
-    <name>nimbus.safety.net.enabled</name>
-    <value>false</value>
-  </property>
+    <value></value>
+  </property-->
 </configuration>

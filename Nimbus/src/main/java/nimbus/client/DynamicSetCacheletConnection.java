@@ -8,7 +8,7 @@ import org.apache.log4j.Logger;
 
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.master.NimbusMaster;
-import nimbus.server.DynamicSetCacheletWorker;
+import nimbus.server.DynamicSetCacheletServer;
 import nimbus.utils.BytesUtil;
 
 public class DynamicSetCacheletConnection extends BaseNimbusClient implements
@@ -27,9 +27,9 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 
 	public boolean add(String element) throws IOException {
 
-		super.write(DynamicSetCacheletWorker.ADD_CMD, element);
+		super.write(DynamicSetCacheletServer.ADD_CMD, element);
 
-		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+		if (super.in.readCmd() != DynamicSetCacheletServer.ACK_CMD) {
 			throw new IOException("Did not receive ACK_CMD");
 		}
 
@@ -49,18 +49,18 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 	}
 
 	public void addAll(Collection<? extends String> value) throws IOException {
-		super.write(DynamicSetCacheletWorker.ADD_ALL_CMD, value);
+		super.write(DynamicSetCacheletServer.ADD_ALL_CMD, value);
 	}
 
 	public void clear() throws IOException {
-		super.write(DynamicSetCacheletWorker.CLEAR_CMD);
+		super.write(DynamicSetCacheletServer.CLEAR_CMD);
 	}
 
 	public boolean contains(String element) throws IOException,
 			CacheletNotConnectedException {
-		super.write(DynamicSetCacheletWorker.CONTAINS_CMD, element);
+		super.write(DynamicSetCacheletServer.CONTAINS_CMD, element);
 
-		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+		if (super.in.readCmd() != DynamicSetCacheletServer.ACK_CMD) {
 			throw new IOException("Did not receive ACK_CMD");
 		}
 
@@ -80,9 +80,9 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 	}
 
 	public boolean isEmpty() throws IOException {
-		super.write(DynamicSetCacheletWorker.ISEMPTY_CMD);
+		super.write(DynamicSetCacheletServer.ISEMPTY_CMD);
 
-		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+		if (super.in.readCmd() != DynamicSetCacheletServer.ACK_CMD) {
 			throw new IOException("Did not receive ACK_CMD");
 		}
 
@@ -102,9 +102,9 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 	}
 
 	public boolean remove(String element) throws IOException {
-		super.write(DynamicSetCacheletWorker.REMOVE_CMD, element);
+		super.write(DynamicSetCacheletServer.REMOVE_CMD, element);
 
-		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+		if (super.in.readCmd() != DynamicSetCacheletServer.ACK_CMD) {
 			throw new IOException("Did not receive ACK_CMD");
 		}
 
@@ -124,9 +124,9 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 	}
 
 	public boolean retainAll(Collection<? extends String> c) throws IOException {
-		super.write(DynamicSetCacheletWorker.RETAIN_ALL_CMD, c);
+		super.write(DynamicSetCacheletServer.RETAIN_ALL_CMD, c);
 
-		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+		if (super.in.readCmd() != DynamicSetCacheletServer.ACK_CMD) {
 			throw new IOException("Did not receive ACK_CMD");
 		}
 
@@ -147,9 +147,9 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 	}
 
 	public int size() throws IOException {
-		super.write(DynamicSetCacheletWorker.SIZE_CMD);
+		super.write(DynamicSetCacheletServer.SIZE_CMD);
 
-		if (super.in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+		if (super.in.readCmd() != DynamicSetCacheletServer.ACK_CMD) {
 			throw new IOException("Did not receive ACK_CMD");
 		}
 
@@ -169,8 +169,8 @@ public class DynamicSetCacheletConnection extends BaseNimbusClient implements
 
 		public DynamicSetCacheletIterator() {
 			try {
-				write(DynamicSetCacheletWorker.GET_CMD);
-				if (in.readCmd() != DynamicSetCacheletWorker.ACK_CMD) {
+				write(DynamicSetCacheletServer.ITER_CMD);
+				if (in.readCmd() != DynamicSetCacheletServer.ACK_CMD) {
 					throw new IOException("Did not receive ACK_CMD");
 				}
 

@@ -6,8 +6,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
@@ -39,6 +42,7 @@ public class NimbusConf extends Configuration {
 	public static final String NIMBUS_SAFETY_NET_ENABLED = "nimbus.safety.net.enabled";
 	public static final String NIMBUS_CACHELET_HEARTBEAT = "nimbus.cachelet.heartbeat";
 	public static final String NIMBUS_REPLICATION_FACTOR = "nimbus.replication.factor";
+	public static final String WRITE_AHEAD_LOG_DIR = "write.ahead.log.dir";
 	public static final String ZK_ASSISTANT_ROOT_PATH = "zk.assistant.root.path";
 	public static final String ZK_SESSION_TIMEOUT = "zk.session.timeout";
 
@@ -134,12 +138,12 @@ public class NimbusConf extends Configuration {
 				throw new RuntimeException(
 						"NIMBUS_HOME environment variable not set");
 			}
-			
+
 			if (System.getenv("HADOOP_HOME") == null) {
 				throw new RuntimeException(
 						"HADOOP_HOME environment variable not set");
 			}
-			
+
 			LOG.info("Creating base configuration");
 			s_instance = new NimbusConf();
 
@@ -202,5 +206,32 @@ public class NimbusConf extends Configuration {
 
 	public int getZKSessionTimeout() {
 		return Integer.parseInt(s_instance.get(ZK_SESSION_TIMEOUT));
+	}
+
+	public Path getWriteAheadLogDir() {
+		return new Path(s_instance.get(WRITE_AHEAD_LOG_DIR));
+	}
+
+	public Path getWriteAheadLog(String cacheName, String cacheletName) {
+		return new Path(s_instance.get(WRITE_AHEAD_LOG_DIR) + "/" + cacheName
+				+ "/" + cacheletName + "/" + System.currentTimeMillis());
+	}
+
+	public Path[] getPastWriteAheadLogs(String cacheName, String cacheletName)
+			throws IOException {
+
+		FileStatus[] files = FileSystem.get(this).globStatus(
+				new Path(s_instance.get(WRITE_AHEAD_LOG_DIR) + "/" + cacheName
+						+ "/" + cacheletName + "/*"));
+		
+		Path[] retval = new Path[files.length];
+
+		for (int i = 0; i < files.length; ++i) {
+			retval[i] = files[i].getPath();
+		}
+
+		Arrays.sort(retval);
+
+		return retval;
 	}
 }

@@ -5,13 +5,11 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryType;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import javax.management.Notification;
 import javax.management.NotificationEmitter;
@@ -24,33 +22,33 @@ import org.apache.log4j.Logger;
 import nimbus.master.CacheDoesNotExistException;
 import nimbus.utils.ICacheletHash;
 
-public class DynamicSetClient implements Iterable<String>, NotificationListener {
+public class DynamicMapClient implements NotificationListener, Iterable<Entry<String, String>> {
 
-	private static final Logger LOG = Logger.getLogger(DynamicSetClient.class);
+	private static final Logger LOG = Logger.getLogger(DynamicMapClient.class);
 
-	private HashMap<Integer, DynamicSetCacheletConnection> list = new HashMap<Integer, DynamicSetCacheletConnection>();
+	private HashMap<Integer, DynamicMapCacheletConnection> list = new HashMap<Integer, DynamicMapCacheletConnection>();
 	private int numServers = -1;
 
-	private HashSet<Integer> tempConnectionSet = new HashSet<Integer>();
+	private HashSet<Integer> tempConnectionMap = new HashSet<Integer>();
 	private ICacheletHash cacheletHash = ICacheletHash.getInstance();
 	private int replication;
-	private DynamicSetCacheletConnection contains_connect_tmp;
-	private Map<Integer, Set<String>> bufferedElements = new HashMap<Integer, Set<String>>();
+	private DynamicMapCacheletConnection tempConnection;
+	private Map<Integer, Map<String, String>> bufferedElements = new HashMap<Integer, Map<String, String>>();
 
-	public DynamicSetClient(String cacheName)
+	public DynamicMapClient(String cacheName)
 			throws CacheDoesNotExistException, IOException {
 		this.replication = NimbusConf.getConf().getReplicationFactor();
 		String[] cachelets = NimbusConf.getConf().getNimbusCacheletAddresses()
 				.split(",");
 		for (int i = 0; i < cachelets.length; ++i) {
-			list.put(i, new DynamicSetCacheletConnection(cacheName,
+			list.put(i, new DynamicMapCacheletConnection(cacheName,
 					cachelets[i]));
 		}
 
 		numServers = cachelets.length;
 
 		for (int i = 0; i < numServers; ++i) {
-			bufferedElements.put(i, new HashSet<String>());
+			bufferedElements.put(i, new HashMap<String, String>());
 		}
 
 		// heuristic to find the tenured pool (largest heap) as seen on
@@ -73,10 +71,6 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		emitter.addNotificationListener(this, null, null);
 	}
 
-	public Iterator<String> iterator() {
-		return new DynamicSetIterator();
-	}
-
 	@Override
 	public void handleNotification(Notification notification, Object handback) {
 		try {
@@ -86,41 +80,47 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		}
 	}
 
+	@Override
+	public Iterator<Entry<String, String>> iterator() {
+		// TODO Auto-generated method stub
+		return new DynamicMapIterator();
+	}
+
 	/**
 	 * Disconnects this set from all Cachelets.
 	 */
 	public synchronized void disconnect() {
-		for (DynamicSetCacheletConnection worker : list.values()) {
+		for (DynamicMapCacheletConnection worker : list.values()) {
 			try {
 				worker.disconnect();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-		tempConnectionSet = null;
+		tempConnectionMap = null;
 	}
 
-	public synchronized boolean addNow(String element)
+	public synchronized String putNow(String key, String value)
 			throws CacheletNotConnectedException {
 
-		tempConnectionSet.clear();
-		cacheletHash.getCacheletsFromKey(element, tempConnectionSet,
-				numServers, replication);
+		tempConnectionMap.clear();
+		cacheletHash.getCacheletsFromKey(key, tempConnectionMap, numServers,
+				replication);
 
-		boolean retval = false;
-		for (Integer cacheletID : tempConnectionSet) {
-			contains_connect_tmp = list.get(cacheletID);
+		String retval = null;
+		for (Integer cacheletID : tempConnectionMap) {
+			tempConnection = list.get(cacheletID);
 			try {
-				retval |= contains_connect_tmp.add(element);
+				retval = tempConnection.put(key, value);
 			} catch (IOException e) {
 				try {
 					LOG.error("Caught exception for ID " + cacheletID + ": "
 							+ e.getMessage() + ".  Attempting reconnect...");
-					contains_connect_tmp.connect();
+					tempConnection.connect();
 					LOG.info("Successfully reconnected to ID " + cacheletID);
 
 					// retry now that we have reconnected
-					retval |= contains_connect_tmp.add(element);
+					retval = tempConnection.put(key, value);
 				} catch (IOException e1) {
 					LOG.error("Failed to reconnect.  Throwing exception:");
 					e.printStackTrace();
@@ -132,25 +132,63 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return retval;
 	}
 
-	public synchronized void add(String element)
+	public synchronized void put(String key, String value)
 			throws CacheletNotConnectedException {
 
 		synchronized (bufferedElements) {
 			// for each element in the set, add it to the mini shards
-			tempConnectionSet.clear();
-			cacheletHash.getCacheletsFromKey(element, tempConnectionSet,
+			tempConnectionMap.clear();
+			cacheletHash.getCacheletsFromKey(key, tempConnectionMap,
 					numServers, replication);
-			for (Integer cacheletID : tempConnectionSet) {
-				bufferedElements.get(cacheletID).add(element);
+			for (Integer cacheletID : tempConnectionMap) {
+				bufferedElements.get(cacheletID).put(key, value);
 			}
 		}
 	}
 
-	public synchronized void addAll(Collection<? extends String> c)
+	public synchronized String get(String key)
 			throws CacheletNotConnectedException {
 
-		for (String s : c) {
-			add(s);
+		tempConnectionMap.clear();
+		cacheletHash.getCacheletsFromKey(key, tempConnectionMap, numServers,
+				replication);
+
+		String retval = null;
+		for (Integer cacheletID : tempConnectionMap) {
+			tempConnection = list.get(cacheletID);
+			try {
+				retval = tempConnection.get(key);
+				if (retval != null) {
+					return retval;
+				}
+			} catch (IOException e) {
+				try {
+					LOG.error("Caught exception for ID " + cacheletID + ": "
+							+ e.getMessage() + ".  Attempting reconnect...");
+					tempConnection.connect();
+					LOG.info("Successfully reconnected to ID " + cacheletID);
+
+					// retry now that we have reconnected
+					retval = tempConnection.get(key);
+					if (retval != null) {
+						return retval;
+					}
+				} catch (IOException e1) {
+					LOG.error("Failed to reconnect.  Throwing exception:");
+					e.printStackTrace();
+					throw new CacheletNotConnectedException(cacheletID, e1);
+				}
+			}
+		}
+
+		return retval;
+	}
+
+	public synchronized void putAll(Map<? extends String, ? extends String> map)
+			throws CacheletNotConnectedException {
+
+		for (Entry<? extends String, ? extends String> entry : map.entrySet()) {
+			put(entry.getKey(), entry.getValue());
 		}
 
 		flush();
@@ -159,30 +197,30 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 	public synchronized void flush() throws CacheletNotConnectedException {
 		synchronized (bufferedElements) {
 			int numEntries = 0;
-			for (Entry<Integer, Set<String>> entry : bufferedElements
+			for (Entry<Integer, Map<String, String>> entry : bufferedElements
 					.entrySet()) {
 				numEntries += entry.getValue().size();
 			}
 
 			LOG.info("Flushing " + numEntries + " total elements...");
-			for (Entry<Integer, Set<String>> entry : bufferedElements
+			for (Entry<Integer, Map<String, String>> entry : bufferedElements
 					.entrySet()) {
-				contains_connect_tmp = list.get(entry.getKey());
+				tempConnection = list.get(entry.getKey());
 				try {
 					LOG.info("Flushing " + entry.getValue().size()
 							+ " elements to " + entry.getKey());
-					contains_connect_tmp.addAll(entry.getValue());
+					tempConnection.putAll(entry.getValue());
 				} catch (IOException e) {
 					try {
 						LOG.error("Caught exception for ID " + entry.getKey()
 								+ ": " + e.getMessage()
 								+ ".  Attempting reconnect...");
-						contains_connect_tmp.connect();
+						tempConnection.connect();
 						LOG.info("Successfully reconnected to ID "
 								+ entry.getKey());
 
 						// retry now that we have reconnected
-						contains_connect_tmp.addAll(entry.getValue());
+						tempConnection.putAll(entry.getValue());
 					} catch (IOException e1) {
 						LOG.error("Failed to reconnect.  Throwing exception:");
 						e.printStackTrace();
@@ -193,7 +231,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 			}
 
 			// clear the buffered elements
-			for (Entry<Integer, Set<String>> entry : bufferedElements
+			for (Entry<Integer, Map<String, String>> entry : bufferedElements
 					.entrySet()) {
 				entry.getValue().clear();
 			}
@@ -201,7 +239,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 	}
 
 	public synchronized void clear() throws CacheletNotConnectedException {
-		for (Entry<Integer, DynamicSetCacheletConnection> entry : list
+		for (Entry<Integer, DynamicMapCacheletConnection> entry : list
 				.entrySet()) {
 			try {
 				entry.getValue().clear();
@@ -222,28 +260,28 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		}
 	}
 
-	public synchronized boolean contains(String element)
+	public synchronized boolean containsKey(String key)
 			throws CacheletNotConnectedException {
 
-		tempConnectionSet.clear();
-		cacheletHash.getCacheletsFromKey(element, tempConnectionSet,
-				numServers, replication);
+		tempConnectionMap.clear();
+		cacheletHash.getCacheletsFromKey(key, tempConnectionMap, numServers,
+				replication);
 
-		for (Integer cacheletID : tempConnectionSet) {
-			contains_connect_tmp = list.get(cacheletID);
+		for (Integer cacheletID : tempConnectionMap) {
+			tempConnection = list.get(cacheletID);
 			try {
-				if (contains_connect_tmp.contains(element)) {
+				if (tempConnection.containsKey(key)) {
 					return true;
 				}
 			} catch (IOException e) {
 				try {
 					LOG.error("Caught exception for ID " + cacheletID + ": "
 							+ e.getMessage() + ".  Attempting reconnect...");
-					contains_connect_tmp.connect();
+					tempConnection.connect();
 					LOG.info("Successfully reconnected to ID " + cacheletID);
 
 					// retry now that we have reconnected
-					if (contains_connect_tmp.contains(element)) {
+					if (tempConnection.containsKey(key)) {
 						return true;
 					}
 				} catch (IOException e1) {
@@ -257,19 +295,40 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return false;
 	}
 
-	public synchronized boolean containsAll(Collection<String> c)
+	public synchronized boolean containsValue(String value)
 			throws CacheletNotConnectedException {
-		for (String o : c) {
-			if (!contains(o)) {
-				return false;
+
+		for (Entry<Integer, DynamicMapCacheletConnection> entry : list
+				.entrySet()) {
+			try {
+				if (entry.getValue().containsValue(value)) {
+					return true;
+				}
+			} catch (IOException e) {
+				try {
+					LOG.error("Caught exception for ID " + entry.getKey()
+							+ ": " + e.getMessage()
+							+ ".  Attempting reconnect...");
+					tempConnection.connect();
+					LOG.info("Successfully reconnected to ID " + entry.getKey());
+
+					// retry now that we have reconnected
+					if (tempConnection.containsValue(value)) {
+						return true;
+					}
+				} catch (IOException e1) {
+					LOG.error("Failed to reconnect.  Throwing exception:");
+					e.printStackTrace();
+					throw new CacheletNotConnectedException(entry.getKey(), e1);
+				}
 			}
 		}
 
-		return true;
+		return false;
 	}
 
 	public synchronized boolean isEmpty() throws CacheletNotConnectedException {
-		for (Entry<Integer, DynamicSetCacheletConnection> entry : list
+		for (Entry<Integer, DynamicMapCacheletConnection> entry : list
 				.entrySet()) {
 			try {
 				if (!entry.getValue().isEmpty()) {
@@ -297,26 +356,26 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return true;
 	}
 
-	public synchronized boolean remove(String element)
+	public synchronized String remove(String key)
 			throws CacheletNotConnectedException {
-		tempConnectionSet.clear();
-		cacheletHash.getCacheletsFromKey(element, tempConnectionSet,
-				numServers, replication);
+		tempConnectionMap.clear();
+		cacheletHash.getCacheletsFromKey(key, tempConnectionMap, numServers,
+				replication);
 
-		boolean retval = false;
-		for (Integer cacheletID : tempConnectionSet) {
-			contains_connect_tmp = list.get(cacheletID);
+		String retval = null;
+		for (Integer cacheletID : tempConnectionMap) {
+			tempConnection = list.get(cacheletID);
 			try {
-				retval |= contains_connect_tmp.remove(element);
+				retval = tempConnection.remove(key);
 			} catch (IOException e) {
 				try {
 					LOG.error("Caught exception for ID " + cacheletID + ": "
 							+ e.getMessage() + ".  Attempting reconnect...");
-					contains_connect_tmp.connect();
+					tempConnection.connect();
 					LOG.info("Successfully reconnected to ID " + cacheletID);
 
 					// retry now that we have reconnected
-					retval |= contains_connect_tmp.remove(element);
+					retval = tempConnection.remove(key);
 				} catch (IOException e1) {
 					LOG.error("Failed to reconnect.  Throwing exception:");
 					e.printStackTrace();
@@ -328,48 +387,9 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		return retval;
 	}
 
-	public synchronized boolean removeAll(Collection<String> c)
-			throws CacheletNotConnectedException {
-		boolean retval = false;
-		for (String s : c) {
-			retval = retval |= remove(s);
-		}
-
-		return retval;
-	}
-
-	public synchronized boolean retainAll(Collection<String> c)
-			throws CacheletNotConnectedException {
-
-		boolean retval = false;
-		for (Entry<Integer, DynamicSetCacheletConnection> entry : list
-				.entrySet()) {
-			try {
-				retval |= entry.getValue().retainAll(c);
-			} catch (IOException e) {
-				try {
-					LOG.error("Caught exception for ID " + entry.getKey()
-							+ ": " + e.getMessage()
-							+ ".  Attempting reconnect...");
-					entry.getValue().connect();
-					LOG.info("Successfully reconnected to ID " + entry.getKey());
-
-					retval |= entry.getValue().retainAll(c);
-
-				} catch (IOException e1) {
-					LOG.error("Failed to reconnect.  Throwing exception:");
-					e.printStackTrace();
-					throw new CacheletNotConnectedException(entry.getKey(), e1);
-				}
-			}
-		}
-
-		return retval;
-	}
-
 	public synchronized int size() throws CacheletNotConnectedException {
 		int size = 0;
-		for (Entry<Integer, DynamicSetCacheletConnection> entry : list
+		for (Entry<Integer, DynamicMapCacheletConnection> entry : list
 				.entrySet()) {
 			try {
 				size += entry.getValue().size();
@@ -393,13 +413,13 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 
 		return size;
 	}
+	
+	private class DynamicMapIterator implements Iterator<Entry<String, String>> {
 
-	private class DynamicSetIterator implements Iterator<String> {
+		private Iterator<DynamicMapCacheletConnection> cacheletsIter = null;
+		private Iterator<Entry<String, String>> iter = null;
 
-		private Iterator<DynamicSetCacheletConnection> cacheletsIter = null;
-		private Iterator<String> iter = null;
-
-		public DynamicSetIterator() {
+		public DynamicMapIterator() {
 			cacheletsIter = list.values().iterator();
 			if (cacheletsIter.hasNext()) {
 				iter = cacheletsIter.next().iterator();
@@ -412,7 +432,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		}
 
 		@Override
-		public String next() {
+		public Entry<String, String> next() {
 			do {
 				if (iter.hasNext()) {
 					return iter.next();
@@ -429,7 +449,7 @@ public class DynamicSetClient implements Iterable<String>, NotificationListener 
 		@Override
 		public void remove() {
 			throw new RuntimeException(
-					"NimbusSetCacheletIterator::remove is unsupported");
+					"NimbusMapCacheletIterator::remove is unsupported");
 		}
 	}
 }
